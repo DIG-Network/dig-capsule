@@ -1,0 +1,43 @@
+[package]
+name = "dig-capsule"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75.0"
+description = "The canonical DIG capsule standard — the single source of truth for capsule size, format (DIGS envelope), and identity (storeId:rootHash). A zero-dependency leaf crate + wasm npm for Node.js and the browser. Expandable to alternative capsule sizes."
+license = "GPL-2.0-only"
+authors = ["DIG Network"]
+repository = "https://github.com/DIG-Network/dig-capsule"
+readme = "README.md"
+keywords = ["dig", "chia", "capsule", "digs", "wasm"]
+categories = ["cryptography::cryptocurrencies", "wasm", "no-std"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# The floor (no features) is a `no_std`, zero-alloc, zero-dependency core: the size
+# constants + invariant, the `SectionId` registry, `[u8; 32]`-based `Capsule` identity
+# (parse/render over caller buffers), the pure DIGS-envelope validator, and the
+# `CapsuleClass`/`CapsuleSpec` seam. Everything a guest wasm or a constrained embedder
+# needs, with nothing pulled in.
+default = ["std"]
+# `alloc` — adds the `String`-returning conveniences (`Capsule::canonical`, hex render).
+alloc = []
+# `std` — the default: implies `alloc` and links the standard library.
+std = ["alloc"]
+# `serde` — derive `Serialize`/`Deserialize` on the public value types.
+serde = ["dep:serde"]
+# `wasm` — the wasm-bindgen surface for `@dignetwork/dig-capsule` (implies `std`).
+wasm = ["std", "dep:wasm-bindgen"]
+
+[dependencies]
+serde = { version = "1", default-features = false, features = ["derive"], optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[dev-dependencies]
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
