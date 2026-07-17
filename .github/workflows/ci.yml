@@ -1,0 +1,204 @@
+name: CI
+
+# Quality gates for the lifted `.dig` store DATA PLANE (epic #744): format, lint
+# (deny warnings), build + test on Linux + Windows, an >=80% line-coverage gate
+# (CLAUDE.md §2.3), and the dual-target `@dignetwork/dig-capsule` wasm package
+# (Node CommonJS + browser ESM) with a Node smoke test AND a real headless-browser
+# test. Runs on every PR and on pushes to main.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Least privilege: CI only needs to read the repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+  # target/ is dominated by wasmtime/cranelift debug symbols; strip debuginfo in
+  # CI so the runner disk survives (behaviour identical; backtraces keep names).
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  test:
+    name: build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          rustup show
+          rustc --version && cargo --version
+
+      # The whole crate graph pulls in wasmtime/cranelift; reclaim the large
+      # preinstalled SDKs so the build does not overrun the ubuntu runner disk.
+      - name: Free disk space (ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /usr/local/lib/android /opt/hostedtoolcache \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell \
+            /usr/local/lib/node_modules /usr/local/share/chromium \
+            /usr/local/graalvm "${AGENT_TOOLSDIRECTORY:-}" || true
+          sudo docker image prune --all --force || true
+
+      - name: Cache cargo + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # The stage/compiler engines embed the REAL guest wasm (BINDING contract
+      # D6), so the wasm32 guest must be built before anything that compiles them.
+      - name: Build guest wasm (required by digstore-stage build.rs)
+        run: cargo build -p digstore-guest --target wasm32-unknown-unknown --release
+
+      - name: Format check
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --all --check
+
+      - name: Clippy (deny warnings)
+        run: >
+          cargo clippy --workspace --all-targets --
+          -D warnings
+          -A clippy::default_constructed_unit_structs
+          -A clippy::field_reassign_with_default
+
+      - name: Build
+        run: cargo build --workspace
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Test (nextest, flaky-aware)
+        run: cargo nextest run --workspace --retries 2
+
+      - name: Doctests
+        run: cargo test --doc --workspace
+
+  coverage:
+    name: Coverage (>=80% lines, gated)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain (+ llvm-tools)
+        run: rustup component add llvm-tools-preview
+
+      - name: Free disk space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /usr/local/lib/android /opt/hostedtoolcache || true
+
+      - name: Cache cargo + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ubuntu-cov-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ubuntu-cov-
+
+      - name: Install cargo-llvm-cov + nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,nextest
+
+      - name: Build guest wasm (required by digstore-stage build.rs)
+        run: cargo build -p digstore-guest --target wasm32-unknown-unknown --release
+
+      # Gate the pure data-plane logic. The wasmtime host glue and the RISC0
+      # backend are exercised by integration tests, not unit-counted here.
+      # Exclude `module_validates_and_exports_full_abi`: it shells out to a
+      # nested `cargo build --target wasm32` that inherits llvm-cov's coverage
+      # RUSTFLAGS and fails under instrumentation. It still gates in the `test`
+      # job (both OS); it measures build/ABI shape, not logic coverage.
+      - name: Coverage (>=80% line gate)
+        run: >
+          cargo llvm-cov nextest --workspace
+          --ignore-filename-regex '(build\.rs|guest/)'
+          --fail-under-lines 80 --retries 2
+          -E 'not test(=module_validates_and_exports_full_abi)'
+
+  wasm-package:
+    name: "@dignetwork/dig-capsule (dual-target wasm)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        run: rustup show
+
+      - name: Install wasm-pack (official installer)
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Format check
+        working-directory: crates/dig-client-wasm
+        run: cargo fmt --check
+
+      - name: Clippy (deny warnings)
+        working-directory: crates/dig-client-wasm
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Parity tests (native, vs digstore-crypto; flaky-aware)
+        working-directory: crates/dig-client-wasm
+        run: cargo nextest run --retries 2
+
+      - name: Parity doctests
+        working-directory: crates/dig-client-wasm
+        run: cargo test --doc
+
+      - name: Build + assemble the dual-target package (web + node -> pkg/)
+        working-directory: crates/dig-client-wasm
+        run: npm run build:pkg
+
+      - name: Generate real-crypto smoke fixture
+        working-directory: crates/dig-client-wasm
+        run: cargo run --example gen_smoke_fixture > smoke_fixture.json
+
+      - name: Node test — verify assembled package end-to-end
+        working-directory: crates/dig-client-wasm
+        run: node scripts/verify-pkg.mjs
+
+      - name: Real-browser test (headless Chrome)
+        working-directory: crates/dig-client-wasm
+        run: wasm-pack test --headless --chrome --test browser

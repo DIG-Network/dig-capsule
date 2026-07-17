@@ -1,0 +1,42 @@
+[workspace]
+resolver = "2"
+# The `.dig` store DATA PLANE, lifted from dig-store (epic #744 Phase 1): the DIGS
+# format, the compiler (files -> capsule), the capsule read-crypto, staging, and the
+# guest/host serve triad. The crate NAMES are preserved verbatim from dig-store so
+# consumers change only the git URL, not their `use` paths (cosmetic rename deferred).
+members = [
+  "crates/digstore-core",
+  "crates/digstore-chunker",
+  "crates/digstore-crypto",
+  "crates/digstore-store",
+  "crates/digstore-guest",
+  "crates/digstore-prover",
+  "crates/digstore-host",
+  "crates/digstore-compiler",
+  "crates/digstore-stage",
+]
+# `digstore-prover/guest` is the RISC0 zkVM guest (built only under the `risc0`
+# feature with the RISC0 toolchain). `dig-client-wasm` is the browser read-crypto
+# behind `@dignetwork/dig-capsule`: it is wasm32-only and resolved independently with
+# its own Cargo.lock (its `digstore-crypto` -> `chia-bls` -> `blst` C/asm does not
+# compile to wasm32), so it is EXCLUDED from the native workspace build.
+exclude = ["crates/digstore-prover/guest", "crates/dig-client-wasm"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+license = "GPL-2.0-only"
+
+[workspace.dependencies]
+sha2 = "0.10"
+proptest = "1"
+hex = "0.4"
+
+# Release hardening: keep integer-overflow checks ON in release builds. This code
+# parses untrusted serialized input and does offset/length arithmetic; silent
+# wrapping in release would turn a length-overflow bug into a memory-safety / logic
+# hazard. Cost is negligible for this workload. (Carried over from dig-store.)
+[profile.release]
+overflow-checks = true
+debug-assertions = false
+panic = "unwind"
