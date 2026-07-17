@@ -1,7 +1,7 @@
 # Runbook — dig-capsule (build, test, publish)
 
 The `.dig` capsule data plane: a Cargo workspace (9 crates) plus the
-`@dignetwork/dig-capsule` wasm npm package (built from `crates/dig-client-wasm`).
+`@dignetwork/dig-client` wasm npm package (built from `crates/dig-client-wasm`).
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ Coverage (>=80% line gate):
 (The excluded test shells out to a nested `cargo build` incompatible with coverage
 instrumentation; it still runs in the plain `cargo test` job.)
 
-## The wasm npm package (@dignetwork/dig-capsule)
+## The wasm npm package (@dignetwork/dig-client)
 
 From `crates/dig-client-wasm` (excluded from the workspace — wasm32-only):
 
@@ -59,7 +59,7 @@ conditional exports, with one shared `dig_client_bg.wasm` and an SRI anchor.
   commits it (RELEASE_TOKEN past branch protection), and pushes the `vX.Y.Z` tag
   from the workspace `Cargo.toml` version.
 - The published GitHub Release fires `.github/workflows/publish-npm.yml`, which
-  rebuilds + publishes `@dignetwork/dig-capsule` to npm (org `NPM_TOKEN`).
+  rebuilds + publishes `@dignetwork/dig-client` to npm (org `NPM_TOKEN`).
 - The Rust crates are consumed by a git-tag pin (crates.io publish is a later goal).
 
 ## Disk hygiene

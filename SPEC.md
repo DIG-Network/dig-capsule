@@ -110,7 +110,7 @@ names (`digstore-core`, …) are preserved so consumers change only the git URL.
 - `digstore-core` is `no_std`/wasm-clean (no `blst`, no `getrandom`); the native
   BLS crypto is isolated in `digstore-crypto`. This split is load-bearing: it lets
   the wasm read path compile to `wasm32-unknown-unknown`.
-- **`@dignetwork/dig-capsule`** is the browser + Node read-crypto package, built
+- **`@dignetwork/dig-client`** is the browser + Node read-crypto package, built
   from `crates/dig-client-wasm` (depends on `digstore-core` only). It ships BOTH
   wasm-bindgen targets in ONE package behind conditional exports: `node` resolves
   to the CommonJS entry, `browser`/`import`/`default` to the ESM entry. The wasm
@@ -125,7 +125,7 @@ names (`digstore-core`, …) are preserved so consumers change only the git URL.
 
 - A conforming reader decodes every released DIGS format version byte-identically
   (§2); the golden-fixture test is the gate.
-- The `@dignetwork/dig-capsule` read-crypto MUST produce byte-identical KDF/AEAD/URN
+- The `@dignetwork/dig-client` read-crypto MUST produce byte-identical KDF/AEAD/URN
   output to the native `digstore-crypto` (proven by `dig-client-wasm`'s native
   `parity` oracle) and verify inclusion proofs identically to the host.
 - Cross-references: the superproject `SYSTEM.md` (store = chain + capsule, the
