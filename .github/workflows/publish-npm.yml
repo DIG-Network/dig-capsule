@@ -1,0 +1,56 @@
+name: publish-npm
+
+# Publish the capsule read-crypto WASM as @dignetwork/dig-capsule. Assembles a
+# DUAL-TARGET package (wasm-bindgen `web` ESM + `nodejs` CommonJS) via
+# crates/dig-client-wasm's build:pkg, so it imports cleanly in BOTH a browser
+# bundler (Vite/webpack) AND a Node.js service, then publishes the assembled
+# ./pkg. Auth uses the org-level NPM_TOKEN secret (public repo). Runs when a
+# GitHub Release is published (release.yml tag -> release) or on manual dispatch.
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: build wasm + npm publish
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crates/dig-client-wasm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Assemble the dual-target package (web + node -> pkg/)
+        run: npm run build:pkg
+
+      - name: Verify the assembled package end-to-end
+        run: |
+          cargo run --example gen_smoke_fixture > smoke_fixture.json
+          node scripts/verify-pkg.mjs
+
+      - name: Publish to npmjs
+        run: npm publish ./pkg --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

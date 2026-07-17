@@ -1,0 +1,53 @@
+[package]
+name = "digstore-host"
+license = "GPL-2.0-only"
+version = "0.1.0"
+edition = "2021"
+description = "wasmtime runtime for serving compiled Digstore WASM modules (paper 6.3, 6.4, 18)."
+
+[dependencies]
+digstore-core = { path = "../digstore-core" }
+digstore-crypto = { path = "../digstore-crypto" }
+digstore-prover = { path = "../digstore-prover" }
+wasmtime = { version = "45", default-features = false, features = ["std", "cranelift", "runtime", "gc", "gc-drc", "gc-null", "threads", "pooling-allocator", "parallel-compilation"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+rand = "0.8"
+rand_chacha = "0.3"
+thiserror = "1"
+
+# Binary-only deps for the `dighost` host (do NOT leak into the lib API).
+clap = { version = "4", features = ["derive"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+object_store = { version = "0.11", features = ["aws"], optional = true }
+anyhow = { version = "1", optional = true }
+hex = { workspace = true, optional = true }
+url = { version = "2", optional = true }
+futures = { version = "0.3", optional = true }
+
+[features]
+default = ["dighost"]
+# The `dighost` binary and its storage/CLI deps. Enabled by default so a plain
+# `cargo build -p digstore-host` produces the binary, but gated so the lib can be
+# built dep-light with `--no-default-features`.
+dighost = ["clap", "tokio", "object_store", "anyhow", "hex", "url", "futures"]
+# Real RISC0 execution-proof backend (residual #3). Forwards to digstore-prover's
+# `risc0` feature, which pulls `risc0-build` (`embed_methods`) — that compiles the
+# zkVM guest ELF and REQUIRES the RISC0 toolchain (`r0vm`/`rzup`). NOT in default
+# build/CI here; flip this + install the toolchain to produce real proofs. Gates
+# `BlindServeDeps::with_risc0_prover` (the backend SELECTION compiles in both modes:
+# off => MockProver, on => Risc0Prover).
+risc0 = ["digstore-prover/risc0"]
+
+[[bin]]
+name = "dighost"
+path = "src/bin/dighost.rs"
+required-features = ["dighost"]
+
+[dev-dependencies]
+wat = "1"
+httpmock = "0.7"
+tempfile = "3"
+object_store = { version = "0.11", features = ["aws"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+futures = "0.3"
+hex = { workspace = true }

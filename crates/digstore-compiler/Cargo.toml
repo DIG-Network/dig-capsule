@@ -1,0 +1,29 @@
+[package]
+name = "digstore-compiler"
+license = "GPL-2.0-only"
+version = "1.0.0"
+edition = "2021"
+description = "dig-compiler: deterministic transform from on-disk generations to a self-serving WASM module (paper 5, 8.3, 17.1, 19)."
+
+[dependencies]
+digstore-core = { path = "../digstore-core" }
+digstore-store = { path = "../digstore-store" }
+# `wasmparser` feature enables `wasm_encoder::reencode` (operator round-trip),
+# used by the §17.1 obfuscation pass to decode + re-encode the code section.
+wasm-encoder = { version = "0.221", features = ["wasmparser"] }
+wasmparser = "0.221"
+chacha20 = "0.9"
+sha2 = "0.10"
+hex = "0.4"
+thiserror = "1"
+
+[build-dependencies]
+wat = "1"
+
+[dev-dependencies]
+wasmtime = "45"
+wasmparser = "0.221"
+wat = "1"
+digstore-host = { path = "../digstore-host" }
+digstore-prover = { path = "../digstore-prover" }
+digstore-crypto = { path = "../digstore-crypto" }
