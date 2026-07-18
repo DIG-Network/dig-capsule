@@ -1,14 +1,16 @@
 name: publish-npm
 
-# Publish the capsule read-crypto WASM as @dignetwork/dig-capsule. Assembles a
+# Publish the capsule read-crypto WASM as @dignetwork/dig-client. Assembles a
 # DUAL-TARGET package (wasm-bindgen `web` ESM + `nodejs` CommonJS) via
 # crates/dig-client-wasm's build:pkg, so it imports cleanly in BOTH a browser
 # bundler (Vite/webpack) AND a Node.js service, then publishes the assembled
-# ./pkg. Auth uses the org-level NPM_TOKEN secret (public repo). Runs when a
-# GitHub Release is published (release.yml tag -> release) or on manual dispatch.
+# ./pkg. Auth uses npm OIDC trusted publishing (no NPM_TOKEN): the job's
+# id-token is exchanged for a short-lived publish credential by npm >= 11.5.1.
+# Runs when a vX.Y.Z tag is pushed (release.yml) or on manual dispatch.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch: {}
 
 concurrency:
@@ -22,6 +24,10 @@ jobs:
   publish:
     name: build wasm + npm publish
     runs-on: ubuntu-latest
+    # OIDC trusted publishing needs a writable id-token; contents:read to checkout.
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: crates/dig-client-wasm
@@ -42,6 +48,10 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
 
+      # OIDC trusted publishing requires npm >= 11.5.1; setup-node ships an older npm.
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@latest
+
       - name: Assemble the dual-target package (web + node -> pkg/)
         run: npm run build:pkg
 
@@ -50,7 +60,6 @@ jobs:
           cargo run --example gen_smoke_fixture > smoke_fixture.json
           node scripts/verify-pkg.mjs
 
+      # Trusted publishing: npm authenticates via the OIDC id-token — no NODE_AUTH_TOKEN.
       - name: Publish to npmjs
         run: npm publish ./pkg --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
