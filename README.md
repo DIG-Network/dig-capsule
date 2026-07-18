@@ -22,7 +22,7 @@ preserved verbatim so consumers change only the git URL, not their `use` paths.
 - `crates/digstore-compiler` — files → self-serving capsule module.
 - `crates/digstore-stage` — the stage → compile build pipeline.
 - `crates/dig-client-wasm` — the browser + Node read-crypto behind the
-  **`@dignetwork/dig-client`** npm package (excluded from the workspace; wasm32-only).
+  **`@dignetwork/dig-capsule-wasm`** npm package (excluded from the workspace; wasm32-only).
 
 ## Docs
 

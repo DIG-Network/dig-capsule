@@ -1,4 +1,4 @@
-//! Real-browser smoke test for the `@dignetwork/dig-client` wasm surface.
+//! Real-browser smoke test for the `@dignetwork/dig-capsule-wasm` wasm surface.
 //!
 //! Runs the compiled wasm-bindgen exports inside a headless browser
 //! (`wasm-pack test --headless --chrome`), proving the read-crypto contract the

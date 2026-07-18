@@ -43,9 +43,9 @@ only on `digstore-core` (pure, wasm-clean) for `Urn` / `MerkleProof` / `Bytes32`
 byte-identical domain constants reproduced in `src/crypto.rs`. The native
 `tests/parity.rs` cross-checks every formula against the real `digstore-crypto`.
 
-## Published npm package — `@dignetwork/dig-client`
+## Published npm package — `@dignetwork/dig-capsule-wasm`
 
-This crate is published to npm as **`@dignetwork/dig-client`** (roadmap #16) so
+This crate is published to npm as **`@dignetwork/dig-capsule-wasm`** (roadmap #16) so
 consumers `npm i` it instead of vendoring the `.wasm` with a hand-copied SHA. One
 package ships BOTH wasm-bindgen targets behind conditional exports:
 
@@ -55,17 +55,17 @@ package ships BOTH wasm-bindgen targets behind conditional exports:
 sharing ONE byte-identical `dig_client_bg.wasm` (so there is one SRI anchor).
 
 ```sh
-npm i @dignetwork/dig-client
+npm i @dignetwork/dig-capsule-wasm
 ```
 
 ```js
 // browser / bundler (Vite, webpack, Next):
-import init, { retrievalKey, verifyInclusion, decryptResourceToText } from "@dignetwork/dig-client";
+import init, { retrievalKey, verifyInclusion, decryptResourceToText } from "@dignetwork/dig-capsule-wasm";
 await init();
 
 // Node:
-import { verifyInclusion, version } from "@dignetwork/dig-client";        // resolves the .cjs entry
-import integrity from "@dignetwork/dig-client/integrity.json" assert { type: "json" };
+import { verifyInclusion, version } from "@dignetwork/dig-capsule-wasm";        // resolves the .cjs entry
+import integrity from "@dignetwork/dig-capsule-wasm/integrity.json" assert { type: "json" };
 ```
 
 ### Integrity / SRI
@@ -76,7 +76,7 @@ artifact fails closed even if the version looks right). The published package sh
 it machine-readably:
 
 - runtime `version()` == the package `version`,
-- `@dignetwork/dig-client/integrity.json` → `{ version, sha256, sri }`,
+- `@dignetwork/dig-capsule-wasm/integrity.json` → `{ version, sha256, sri }`,
 - `package.json` mirrors `digIntegrity.{sha256,sri}`.
 
 **`integrity.json` is the source of truth for the digest** — it always records the
@@ -86,19 +86,19 @@ not a hardcoded hex: wasm-bindgen/wasm-opt output can differ slightly by build h
 version you installed. Verify the installed binary against it:
 
 ```sh
-sha256sum node_modules/@dignetwork/dig-client/dig_client_bg.wasm
-# must equal .sha256 in node_modules/@dignetwork/dig-client/integrity.json
+sha256sum node_modules/@dignetwork/dig-capsule-wasm/dig_client_bg.wasm
+# must equal .sha256 in node_modules/@dignetwork/dig-capsule-wasm/integrity.json
 ```
 
 **Consumers that vendor today** — `hub.dig.net`, `dig-embed.js`, `dig-companion`,
 `dig-sdk` (each hand-copies the wasm + glue and re-asserts a SHA) — can switch to
-`npm i @dignetwork/dig-client` and pin the digest from `integrity.json`, then drop
+`npm i @dignetwork/dig-capsule-wasm` and pin the digest from `integrity.json`, then drop
 their vendored copies. (Cross-repo follow-on; not done here.)
 
 ## Build (locally)
 
 ```sh
-# Assemble the publishable @dignetwork/dig-client package into ./pkg (both targets):
+# Assemble the publishable @dignetwork/dig-capsule-wasm package into ./pkg (both targets):
 npm run build:pkg
 # Verify it (exports + .d.ts + integrity + a Node runtime read-path smoke):
 cargo run --example gen_smoke_fixture > smoke_fixture.json && node scripts/verify-pkg.mjs
@@ -114,7 +114,7 @@ want the module without wasm-bindgen JS glue.
 
 ### Publishing
 
-`@dignetwork/dig-client` is published by `.github/workflows/publish-npm.yml` (gated
+`@dignetwork/dig-capsule-wasm` is published by `.github/workflows/publish-npm.yml` (gated
 on a GitHub Release or `workflow_dispatch`), which builds + verifies the package and
 runs `npm publish ./pkg --access public` with the org `NPM_TOKEN`. Bump the crate
 version in `Cargo.toml` (the npm version tracks it) before cutting a release.

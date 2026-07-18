@@ -1,4 +1,4 @@
-// assemble-pkg.mjs — assemble the publishable `@dignetwork/dig-client` npm package.
+// assemble-pkg.mjs — assemble the publishable `@dignetwork/dig-capsule-wasm` npm package.
 //
 // Roadmap #16: publish the read-crypto WASM (dig_client) to npm so consumers
 // (hub.dig.net, dig-embed.js, dig-companion, dig-sdk) can `npm i` it instead of
@@ -40,7 +40,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
-const SCOPED_NAME = "@dignetwork/dig-client";
+const SCOPED_NAME = "@dignetwork/dig-capsule-wasm";
 const REPO_URL = "https://github.com/DIG-Network/dig-capsule";
 
 const here = dirname(fileURLToPath(import.meta.url));
