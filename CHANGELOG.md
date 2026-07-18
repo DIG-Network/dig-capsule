@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org) and
 [Conventional Commits](https://www.conventionalcommits.org).
 
+## [0.1.2] - 2026-07-18
+
+### Bug Fixes
+- **ci:** Bump publish-npm node-version 20→22 for npm@12 OIDC (#753) (#4)
+
 ## [0.1.1] - 2026-07-18
 
 ### Bug Fixes
