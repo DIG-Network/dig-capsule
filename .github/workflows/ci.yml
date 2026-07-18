@@ -2,7 +2,7 @@ name: CI
 
 # Quality gates for the lifted `.dig` store DATA PLANE (epic #744): format, lint
 # (deny warnings), build + test on Linux + Windows, an >=80% line-coverage gate
-# (CLAUDE.md §2.3), and the dual-target `@dignetwork/dig-client` wasm package
+# (CLAUDE.md §2.3), and the dual-target `@dignetwork/dig-capsule-wasm` wasm package
 # (Node CommonJS + browser ESM) with a Node smoke test AND a real headless-browser
 # test. Runs on every PR and on pushes to main.
 on:
@@ -150,7 +150,7 @@ jobs:
           -E 'not test(=module_validates_and_exports_full_abi)'
 
   wasm-package:
-    name: "@dignetwork/dig-client (dual-target wasm)"
+    name: "@dignetwork/dig-capsule-wasm (dual-target wasm)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

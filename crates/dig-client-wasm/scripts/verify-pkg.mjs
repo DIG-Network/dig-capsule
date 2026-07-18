@@ -1,4 +1,4 @@
-// verify-pkg.mjs — gate the assembled `@dignetwork/dig-client` package (roadmap #16).
+// verify-pkg.mjs — gate the assembled `@dignetwork/dig-capsule-wasm` package (roadmap #16).
 //
 // Asserts the PUBLISHABLE pkg/ is correct end-to-end before it can ship:
 //   1. package.json: scoped name, public access, conditional exports, files set.
@@ -34,7 +34,7 @@ if (!existsSync(pkgDir)) {
 
 // --- (1) package.json shape -------------------------------------------------
 const pkg = JSON.parse(readFileSync(resolve(pkgDir, "package.json"), "utf8"));
-check("name is scoped", pkg.name === "@dignetwork/dig-client", pkg.name);
+check("name is scoped", pkg.name === "@dignetwork/dig-capsule-wasm", pkg.name);
 check("publishConfig.access is public", pkg.publishConfig?.access === "public");
 check("type is module", pkg.type === "module");
 check("version is semver", /^\d+\.\d+\.\d+/.test(pkg.version ?? ""), pkg.version);
@@ -90,7 +90,7 @@ const fx = JSON.parse(readFileSync(fixturePath, "utf8"));
 const ct = Uint8Array.from(Buffer.from(fx.ciphertext_b64, "base64"));
 
 // The Node entry is CommonJS (.cjs); load it via createRequire so we exercise the
-// exact `require("@dignetwork/dig-client")` path a Node consumer uses.
+// exact `require("@dignetwork/dig-capsule-wasm")` path a Node consumer uses.
 const { createRequire } = await import("node:module");
 const require = createRequire(import.meta.url);
 const nodeEntry = resolve(pkgDir, "node", "dig_client.cjs");
