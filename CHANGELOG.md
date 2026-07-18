@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org) and
 ## [0.1.2] - 2026-07-18
 
 ### Bug Fixes
-- **ci:** Bump publish-npm node-version 20→22 for npm@12 OIDC (#753) (#4)
+- **ci:** Bump publish-npm node-version 20→22 for npm@12 OIDC (#753) (#4)- Bump dig-client-wasm version 0.1.1 → 0.1.2 (missing from PR #4)
 
 ## [0.1.1] - 2026-07-18
 
