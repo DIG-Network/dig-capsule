@@ -1,0 +1,633 @@
+//! Encode the data-section blob in the BINDING contract format (D1–D5).
+//!
+//! The byte-exact format is owned by [`dig_capsule_core::datasection`]; this module
+//! is a thin compiler-side adapter that gathers the typed inputs and emits the
+//! sections in ascending id order via [`dig_capsule_core::datasection::encode_blob`].
+//! The compiler's old private `SEG_*`/9-byte-row format is **deleted**: the
+//! single source of truth is now core, so the compiler emits exactly what the
+//! guest reads and the client verifies.
+//!
+//! Sections (D1):
+//! ```text
+//!  StoreId      = 1   32 bytes raw
+//!  CurrentRoot  = 2   32 bytes raw (per-resource merkle root, D5)
+//!  RootHistory  = 3   Vec<Bytes32> (u32 BE count + raw 32B each)
+//!  PublicKey    = 4   48 bytes raw
+//!  TrustedKeys  = 5   Vec<TrustedHostKey> (compiler-local codec, byte-exact)
+//!  Metadata     = 6   MetadataManifest via core Encode (plaintext, §8.4)
+//!  AuthInfo     = 7   AuthenticationInfo via core Encode
+//!  KeyTable     = 8   core encode_key_table (D3)
+//!  ChunkPool    = 9   core encode_chunk_pool, GLOBAL INDEX ORDER (D4)
+//!  MerkleNodes  = 10  core encode_merkle_nodes = per-resource leaves (D5)
+//!  Filler       = 11  deterministic ChaCha20 filler (unreferenced, §8.3)
+//!  ChainState   = 12  OPTIONAL on-chain anchor pointer (emitted before Filler)
+//!  PublicManifest = 13 OPTIONAL normalized public file set, PUBLIC stores only
+//!                      (emitted before Filler; §5.1 additive — older readers ignore it)
+//! ```
+//! Multi-byte integers are big-endian (Chia streamable, deviation #1).
+
+use dig_capsule_core::datasection::{encode_chunk_pool, encode_key_table, encode_merkle_nodes};
+use dig_capsule_core::{
+    AuthenticationInfo, Bytes32, Bytes48, Encode, Encoder, KeyTableEntry, MetadataManifest,
+    TrustedHostKey,
+};
+
+/// All inputs needed to encode the contract data-section blob (gathered by the
+/// pipeline). Public byte material only — no secrets (§17.2).
+pub struct DataSectionInputs {
+    pub store_id: Bytes32,
+    /// Per-resource merkle root of the CURRENT generation (D5): equals
+    /// `MerkleTree::from_leaves(merkle_leaves).root()`.
+    pub current_root: Bytes32,
+    pub root_history: Vec<Bytes32>,
+    pub store_pubkey: Bytes48,
+    pub trusted_keys: Vec<TrustedHostKey>,
+    pub manifest: MetadataManifest,
+    pub auth_info: AuthenticationInfo,
+    /// KeyTable entries (D3), in deterministic build order.
+    pub key_table: Vec<KeyTableEntry>,
+    /// Unique chunk ciphertext bodies in GLOBAL INDEX order (D4); the
+    /// `chunk_indices` in `key_table` address into this list.
+    pub chunk_pool_bodies: Vec<Vec<u8>>,
+    /// Per-resource merkle leaves of the current generation, ascending by
+    /// `static_key` (D5). `MerkleNodes` (id 10) carries exactly these.
+    pub merkle_leaves: Vec<Bytes32>,
+    /// Deterministic ChaCha20 filler bytes (unreferenced; §8.3, deviation #2).
+    pub filler: Vec<u8>,
+    /// Optional on-chain anchor pointer embedded as `SectionId::ChainState`.
+    pub chain_state: Option<dig_capsule_core::datasection::ChainState>,
+    /// Optional normalized public manifest (the store's complete public file set,
+    /// latest version per path) embedded as `SectionId::PublicManifest` (id 13).
+    /// Present only for PUBLIC stores; a private store's paths stay opaque, so it
+    /// carries `None`. ADDITIVE: older readers ignore the section (§5.1).
+    pub public_manifest: Option<dig_capsule_core::PublicManifest>,
+}
+
+/// Encode `Vec<TrustedHostKey>` using core primitive framing field-by-field.
+///
+/// DEVIATION: `dig_capsule_core::TrustedHostKey` does NOT implement `Encode`/`Decode`
+/// (the compiler may not edit core). We reproduce the exact framing core would use
+/// for a derived impl — `Vec` is a 4-byte BE count, each entry is
+/// `[u8;48] public_key` (raw, no prefix) then `String label` (4-byte BE len +
+/// bytes) — so the guest's matching decode reads identical bytes.
+fn encode_trusted_keys(keys: &[TrustedHostKey]) -> Vec<u8> {
+    let mut enc = Encoder::new();
+    (keys.len() as u32).encode(&mut enc);
+    for k in keys {
+        k.public_key.encode(&mut enc);
+        k.label.encode(&mut enc);
+    }
+    enc.finish()
+}
+
+/// Encode `Vec<Bytes32>` via core framing (u32 BE count + raw 32B each).
+fn encode_root_history(roots: &[Bytes32]) -> Vec<u8> {
+    let mut enc = Encoder::new();
+    roots.to_vec().encode(&mut enc);
+    enc.finish()
+}
+
+/// Build the full data-section blob in the canonical contract format (D1).
+///
+/// The always-present sections (ids 1..=10) are emitted in ascending id order,
+/// then the OPTIONAL `ChainState` (12) and `PublicManifest` (13) — when present —
+/// and finally `Filler` (11), which MUST stay the trailing / highest-offset body.
+/// The offset table and header are produced by
+/// [`dig_capsule_core::datasection::encode_blob`], so the bytes are byte-identical to
+/// what the guest's `DataView` parses.
+pub fn encode_data_section(i: &DataSectionInputs) -> Vec<u8> {
+    use dig_capsule_core::datasection::SectionId;
+
+    let pool_refs: Vec<&[u8]> = i.chunk_pool_bodies.iter().map(|b| b.as_slice()).collect();
+
+    let mut sections: Vec<(u16, Vec<u8>)> = vec![
+        (SectionId::StoreId as u16, i.store_id.0.to_vec()),
+        (SectionId::CurrentRoot as u16, i.current_root.0.to_vec()),
+        (
+            SectionId::RootHistory as u16,
+            encode_root_history(&i.root_history),
+        ),
+        (SectionId::PublicKey as u16, i.store_pubkey.0.to_vec()),
+        (
+            SectionId::TrustedKeys as u16,
+            encode_trusted_keys(&i.trusted_keys),
+        ),
+        (SectionId::Metadata as u16, i.manifest.to_bytes()),
+        (SectionId::AuthInfo as u16, i.auth_info.to_bytes()),
+        (SectionId::KeyTable as u16, encode_key_table(&i.key_table)),
+        (SectionId::ChunkPool as u16, encode_chunk_pool(&pool_refs)),
+        (
+            SectionId::MerkleNodes as u16,
+            encode_merkle_nodes(&i.merkle_leaves),
+        ),
+    ];
+
+    // Optional on-chain anchor (id 12). Pushed BEFORE Filler so the Filler body
+    // stays the trailing section: uniform-size padding grows only the last body.
+    if let Some(cs) = &i.chain_state {
+        sections.push((SectionId::ChainState as u16, cs.encode()));
+    }
+
+    // Optional normalized public manifest (id 13). Also BEFORE Filler, for the
+    // same reason. Additive: absent for private stores and older writers.
+    if let Some(pm) = &i.public_manifest {
+        sections.push((
+            SectionId::PublicManifest as u16,
+            dig_capsule_core::datasection::encode_public_manifest(pm),
+        ));
+    }
+
+    // Filler MUST be the last body (highest start offset) for the uniform-size
+    // padding math in the pipeline to hold.
+    sections.push((SectionId::Filler as u16, i.filler.clone()));
+
+    dig_capsule_core::datasection::encode_blob(&sections)
+}
+
+/// Re-key a compiled module to a new set of trusted host keys.
+///
+/// §12.2: a module verifies the serving host's BLS attestation against the
+/// trusted set embedded in its data section. A party that re-deploys a module on
+/// its OWN serving node (e.g. `dig clone`) must therefore re-embed its own host
+/// key so its node can attest. This extracts the module's DIGS blob, replaces
+/// ONLY the `TrustedKeys` section (every other section — chunks, key table,
+/// merkle nodes, current root — is preserved byte-for-byte, so the served
+/// content and its proof are unchanged), and re-injects the blob.
+pub fn rekey_module_trusted(
+    module: &[u8],
+    new_trusted: &[TrustedHostKey],
+) -> Result<Vec<u8>, crate::error::CompilerError> {
+    use crate::inject::{extract_data_section, inject_data_section};
+    use crate::pipeline::DATA_SECTION_MEM_OFFSET;
+
+    let blob = extract_data_section(module, DATA_SECTION_MEM_OFFSET)?;
+    let new_blob = rekey_blob_trusted(&blob, new_trusted)?;
+    inject_data_section(module, &new_blob, DATA_SECTION_MEM_OFFSET)
+}
+
+/// Rebuild a DIGS data-section blob with a swapped `TrustedKeys` section,
+/// preserving every other present section byte-for-byte.
+///
+/// `ChainState` (id 12) is an OPTIONAL passthrough: present in the rebuilt blob
+/// iff the source carries it, and always positioned BEFORE the trailing `Filler`
+/// body so the uniform-size padding invariant survives a rekey. Older modules
+/// that carry no `ChainState` rekey unchanged.
+fn rekey_blob_trusted(
+    blob: &[u8],
+    new_trusted: &[TrustedHostKey],
+) -> Result<Vec<u8>, crate::error::CompilerError> {
+    use dig_capsule_core::datasection::{encode_blob, DataView, SectionId};
+
+    let view = DataView::parse(blob).map_err(|e| {
+        crate::error::CompilerError::InvalidTemplate(format!("bad DIGS blob: {e:?}"))
+    })?;
+
+    // Sections 1..=10, swapping TrustedKeys; each is optional passthrough.
+    const HEAD_IDS: [SectionId; 10] = [
+        SectionId::StoreId,
+        SectionId::CurrentRoot,
+        SectionId::RootHistory,
+        SectionId::PublicKey,
+        SectionId::TrustedKeys,
+        SectionId::Metadata,
+        SectionId::AuthInfo,
+        SectionId::KeyTable,
+        SectionId::ChunkPool,
+        SectionId::MerkleNodes,
+    ];
+    let mut sections: Vec<(u16, Vec<u8>)> = Vec::new();
+    for id in HEAD_IDS {
+        let body = if id == SectionId::TrustedKeys {
+            encode_trusted_keys(new_trusted)
+        } else {
+            match view.section(id) {
+                Some(b) => b.to_vec(),
+                None => continue, // absent section: keep it absent
+            }
+        };
+        sections.push((id as u16, body));
+    }
+
+    // Optional ChainState (id 12) passthrough, BEFORE the trailing Filler body.
+    if let Some(body) = view.section(SectionId::ChainState) {
+        sections.push((SectionId::ChainState as u16, body.to_vec()));
+    }
+
+    // Optional PublicManifest (id 13) passthrough — preserve it byte-for-byte so
+    // a rekey never drops the public file listing. Also before the trailing Filler.
+    if let Some(body) = view.section(SectionId::PublicManifest) {
+        sections.push((SectionId::PublicManifest as u16, body.to_vec()));
+    }
+
+    // Filler last (if present), preserving the uniform-size padding invariant.
+    if let Some(body) = view.section(SectionId::Filler) {
+        sections.push((SectionId::Filler as u16, body.to_vec()));
+    }
+
+    Ok(encode_blob(&sections))
+}
+
+/// Identity and content root extracted and cryptographically verified from a
+/// compiled module's embedded data section. Produced by [`verify_module_root`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModuleIdentity {
+    /// Embedded StoreId, confirmed to equal the caller's expected store id.
+    /// This is the store's on-chain Chia launcher id, not a hash of any key.
+    pub store_id: Bytes32,
+    /// The module's embedded publisher (host) BLS G1 public key. Head
+    /// authorization is a separate push-signature check against this key;
+    /// it is NOT bound to `store_id` by any hash relationship.
+    pub public_key: Bytes48,
+    /// Per-resource merkle root recomputed from the embedded MerkleNodes leaves,
+    /// confirmed to equal the embedded CurrentRoot.
+    pub root: Bytes32,
+}
+
+/// Extract and verify a downloaded module's self-describing identity, returning
+/// the recomputed generation root. This is the integrity gate a `clone`/`pull`
+/// MUST run before trusting or executing a module fetched from a remote.
+///
+/// The `expected_store_id` is the store's on-chain Chia launcher id (the store's
+/// singleton). The publisher key is taken from the module's embedded `PublicKey`
+/// section; head authorization is a SEPARATE push-signature check the caller runs
+/// against this embedded key — there is no `id == SHA-256(key)` binding.
+///
+/// Enforced PURELY from the module bytes (no trust in any server-supplied field):
+///  1. embedded `StoreId` == `expected_store_id` (the id the caller asked for);
+///  2. the merkle root recomputed from the embedded `MerkleNodes` leaves equals
+///     the embedded `CurrentRoot` (the served content is internally consistent
+///     and tamper-evident).
+///
+/// The caller MUST ALSO check `identity.root == claimed_served_root` so the bytes
+/// are bound to the root advertised by the descriptor/ETag, and MUST verify the
+/// publisher BLS signature over `(root, store_id)` against `identity.public_key`.
+///
+/// LIMITATION: this proves the module is a self-consistent build for the requested
+/// store identity, but NOT that `root` is the publisher's latest authorized root —
+/// that additionally requires verifying that the served root equals the launcher
+/// singleton's current on-chain root, which the current wire protocol does not
+/// transport (the chain is the real authority for the current root).
+/// Extract the raw data-section blob from a compiled module (the bytes a
+/// `DataView`/`read_chain_state` parses). Thin public wrapper over the internal
+/// extraction used by `verify_module_root`.
+pub fn extract_data_section_blob(module: &[u8]) -> Result<Vec<u8>, crate::error::CompilerError> {
+    use crate::inject::extract_data_section;
+    use crate::pipeline::DATA_SECTION_MEM_OFFSET;
+    extract_data_section(module, DATA_SECTION_MEM_OFFSET)
+}
+
+pub fn verify_module_root(
+    module: &[u8],
+    expected_store_id: &Bytes32,
+) -> Result<ModuleIdentity, crate::error::CompilerError> {
+    use crate::inject::extract_data_section;
+    use crate::pipeline::DATA_SECTION_MEM_OFFSET;
+    use dig_capsule_core::datasection::{decode_merkle_leaves, DataView, SectionId};
+    use dig_capsule_core::merkle::MerkleTree;
+
+    let err = |m: String| crate::error::CompilerError::InvalidTemplate(m);
+
+    let blob = extract_data_section(module, DATA_SECTION_MEM_OFFSET)?;
+    let view = DataView::parse(&blob).map_err(|e| err(format!("bad DIGS blob: {e:?}")))?;
+
+    let sid = view
+        .section(SectionId::StoreId)
+        .ok_or_else(|| err("missing StoreId section".into()))?;
+    let sid: [u8; 32] = sid
+        .try_into()
+        .map_err(|_| err("StoreId section not 32 bytes".into()))?;
+    let store_id = Bytes32(sid);
+    if &store_id != expected_store_id {
+        return Err(err(
+            "module StoreId does not match the requested store id".into()
+        ));
+    }
+
+    let pk = view
+        .section(SectionId::PublicKey)
+        .ok_or_else(|| err("missing PublicKey section".into()))?;
+    let pk_arr: [u8; 48] = pk
+        .try_into()
+        .map_err(|_| err("PublicKey section not 48 bytes".into()))?;
+    // NOTE: store_id is the on-chain launcher id and is intentionally NOT bound to
+    // SHA-256(pk). Head authorization is verified by the caller as a BLS push
+    // signature over (root, store_id) against this embedded publisher key.
+
+    let cr = view
+        .section(SectionId::CurrentRoot)
+        .ok_or_else(|| err("missing CurrentRoot section".into()))?;
+    let cr: [u8; 32] = cr
+        .try_into()
+        .map_err(|_| err("CurrentRoot section not 32 bytes".into()))?;
+    let current_root = Bytes32(cr);
+
+    let mn = view
+        .section(SectionId::MerkleNodes)
+        .ok_or_else(|| err("missing MerkleNodes section".into()))?;
+    let leaves = decode_merkle_leaves(mn).map_err(|e| err(format!("bad MerkleNodes: {e:?}")))?;
+    let recomputed = MerkleTree::from_leaves(leaves).root();
+    if recomputed != current_root {
+        return Err(err(
+            "recomputed merkle root does not match embedded CurrentRoot".into(),
+        ));
+    }
+
+    Ok(ModuleIdentity {
+        store_id,
+        public_key: Bytes48(pk_arr),
+        root: current_root,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dig_capsule_core::datasection::{
+        decode_merkle_leaves, lookup_key, read_chunk, DataView, SectionId,
+    };
+    use dig_capsule_core::merkle::MerkleTree;
+    use dig_capsule_core::{
+        AuthenticationInfo, Bytes32, Bytes48, Decode, Decoder, MetadataManifest,
+    };
+
+    fn manifest() -> MetadataManifest {
+        MetadataManifest {
+            schema_version: 1,
+            name: "n".into(),
+            version: None,
+            description: None,
+            authors: vec![],
+            license: None,
+            homepage: None,
+            repository: None,
+            keywords: vec![],
+            categories: vec![],
+            icon: None,
+            content_type: None,
+            links: Default::default(),
+            custom: Default::default(),
+        }
+    }
+
+    fn auth() -> AuthenticationInfo {
+        AuthenticationInfo {
+            requires_session: false,
+            requires_jwt: false,
+            jwks_url: None,
+            accepted_algorithms: vec![],
+        }
+    }
+
+    fn inputs() -> DataSectionInputs {
+        let leaves = vec![Bytes32([0x33; 32]), Bytes32([0x44; 32])];
+        let root = MerkleTree::from_leaves(leaves.clone()).root();
+        DataSectionInputs {
+            store_id: Bytes32([0xAB; 32]),
+            current_root: root,
+            root_history: vec![Bytes32([0x11; 32]), Bytes32([0x22; 32])],
+            store_pubkey: Bytes48([0xCD; 48]),
+            trusted_keys: vec![TrustedHostKey {
+                public_key: [0x42u8; 48],
+                label: "L".into(),
+            }],
+            manifest: manifest(),
+            auth_info: auth(),
+            key_table: vec![KeyTableEntry {
+                static_key: Bytes32([1; 32]),
+                generation: Bytes32([0x11; 32]),
+                chunk_indices: vec![0],
+                total_size: 6,
+            }],
+            chunk_pool_bodies: vec![b"abcdef".to_vec()],
+            merkle_leaves: leaves,
+            filler: vec![0x09u8; 16],
+            chain_state: None,
+            public_manifest: None,
+        }
+    }
+
+    #[test]
+    fn starts_with_magic_and_version() {
+        let blob = encode_data_section(&inputs());
+        assert_eq!(&blob[0..4], b"DIGS");
+        assert_eq!(blob[4], 1u8);
+    }
+
+    #[test]
+    fn offset_table_has_eleven_sections_in_ascending_id_order() {
+        let blob = encode_data_section(&inputs());
+        let count = u32::from_be_bytes([blob[5], blob[6], blob[7], blob[8]]);
+        assert_eq!(count, 11);
+        // Rows: id(u16 BE) | offset(u32) | len(u32) = 10 bytes each, starting at 9.
+        let mut prev_id = 0u16;
+        for row in 0..11usize {
+            let p = 9 + row * 10;
+            let id = u16::from_be_bytes([blob[p], blob[p + 1]]);
+            assert!(id > prev_id, "ids must be strictly ascending");
+            prev_id = id;
+        }
+        assert_eq!(prev_id, 11, "last section id is Filler=11");
+    }
+
+    #[test]
+    fn view_round_trips_every_section() {
+        let inp = inputs();
+        let blob = encode_data_section(&inp);
+        let view = DataView::parse(&blob).expect("parses");
+
+        assert_eq!(view.section(SectionId::StoreId).unwrap(), &inp.store_id.0);
+        assert_eq!(
+            view.section(SectionId::CurrentRoot).unwrap(),
+            &inp.current_root.0
+        );
+        assert_eq!(
+            view.section(SectionId::PublicKey).unwrap(),
+            &inp.store_pubkey.0
+        );
+
+        // RootHistory decodes as Vec<Bytes32>.
+        let rh = view.section(SectionId::RootHistory).unwrap();
+        let mut dec = Decoder::new(rh);
+        let hist = Vec::<Bytes32>::decode(&mut dec).unwrap();
+        assert_eq!(hist, inp.root_history);
+
+        // Metadata decodes as MetadataManifest.
+        let md = view.section(SectionId::Metadata).unwrap();
+        let mut dec = Decoder::new(md);
+        let m = MetadataManifest::decode(&mut dec).unwrap();
+        assert_eq!(m.name, "n");
+
+        // AuthInfo decodes.
+        let ai = view.section(SectionId::AuthInfo).unwrap();
+        let mut dec = Decoder::new(ai);
+        let a = AuthenticationInfo::decode(&mut dec).unwrap();
+        assert_eq!(a, inp.auth_info);
+
+        // KeyTable: lookup by static_key.
+        let kt = view.section(SectionId::KeyTable).unwrap();
+        let entry = lookup_key(kt, &Bytes32([1; 32])).expect("found");
+        assert_eq!(entry.chunk_indices, vec![0]);
+        assert_eq!(entry.total_size, 6);
+
+        // ChunkPool: read chunk 0.
+        let pool = view.section(SectionId::ChunkPool).unwrap();
+        assert_eq!(read_chunk(pool, 0).unwrap(), b"abcdef");
+
+        // MerkleNodes decodes back to the leaves, and CurrentRoot == tree root.
+        let mn = view.section(SectionId::MerkleNodes).unwrap();
+        let leaves = decode_merkle_leaves(mn).unwrap();
+        assert_eq!(leaves, inp.merkle_leaves);
+        assert_eq!(MerkleTree::from_leaves(leaves).root(), inp.current_root);
+
+        // Filler present.
+        assert_eq!(view.section(SectionId::Filler).unwrap(), &inp.filler[..]);
+    }
+
+    #[test]
+    fn deterministic_encode() {
+        let a = encode_data_section(&inputs());
+        let b = encode_data_section(&inputs());
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn encode_emits_chain_state_when_present_and_filler_stays_last() {
+        use dig_capsule_core::datasection::{read_chain_state, ChainState, DataView, SectionId};
+        let mut inp = inputs();
+        let cs = ChainState {
+            version: 1,
+            network: "mainnet".into(),
+            launcher_id: inp.store_id,
+            coin_id: dig_capsule_core::Bytes32([9u8; 32]),
+            confirmed_height: 1234,
+            tx_id: String::new(),
+            coinset_url: "https://api.coinset.org".into(),
+        };
+        inp.chain_state = Some(cs.clone());
+        let blob = encode_data_section(&inp);
+        assert_eq!(read_chain_state(&blob).unwrap().unwrap(), cs);
+        // Filler must be encoded AFTER ChainState (highest start offset), so
+        // uniform-size padding still works. Both bodies are slices into `blob`.
+        let view = DataView::parse(&blob).unwrap();
+        let filler_ptr = view.section(SectionId::Filler).expect("filler").as_ptr() as usize;
+        let chain_ptr = view.section(SectionId::ChainState).expect("chain").as_ptr() as usize;
+        assert!(
+            filler_ptr > chain_ptr,
+            "Filler must come after ChainState in the blob"
+        );
+    }
+
+    #[test]
+    fn encode_without_chain_state_has_no_section() {
+        use dig_capsule_core::datasection::read_chain_state;
+        let inp = inputs(); // chain_state defaults to None
+        let blob = encode_data_section(&inp);
+        assert!(read_chain_state(&blob).unwrap().is_none());
+    }
+
+    #[test]
+    fn encode_emits_public_manifest_when_present_and_filler_stays_last() {
+        use dig_capsule_core::datasection::{read_public_manifest, DataView, SectionId};
+        use dig_capsule_core::{PublicManifest, PublicManifestEntry};
+        let mut inp = inputs();
+        let pm = PublicManifest::new(vec![PublicManifestEntry {
+            path: "index.html".into(),
+            latest_root: Bytes32([0x77; 32]),
+            generation_index: 4,
+            sha256_latest: Bytes32([0x88; 32]),
+            version_count: 2,
+        }]);
+        inp.public_manifest = Some(pm.clone());
+        let blob = encode_data_section(&inp);
+        // The new reader recovers the manifest verbatim.
+        assert_eq!(read_public_manifest(&blob).unwrap().unwrap(), pm);
+        // Every pre-existing section is still readable (old readers unaffected).
+        let view = DataView::parse(&blob).unwrap();
+        assert_eq!(view.section(SectionId::StoreId).unwrap(), &inp.store_id.0);
+        // Filler must remain the trailing body for uniform-size padding.
+        let filler_ptr = view.section(SectionId::Filler).unwrap().as_ptr() as usize;
+        let pm_ptr = view.section(SectionId::PublicManifest).unwrap().as_ptr() as usize;
+        assert!(
+            filler_ptr > pm_ptr,
+            "Filler must come after PublicManifest in the blob"
+        );
+    }
+
+    #[test]
+    fn encode_without_public_manifest_has_no_section() {
+        use dig_capsule_core::datasection::read_public_manifest;
+        let inp = inputs(); // public_manifest defaults to None
+        let blob = encode_data_section(&inp);
+        assert!(read_public_manifest(&blob).unwrap().is_none());
+    }
+
+    #[test]
+    fn rekey_preserves_public_manifest() {
+        use dig_capsule_core::datasection::read_public_manifest;
+        use dig_capsule_core::{PublicManifest, PublicManifestEntry};
+        let mut inp = inputs();
+        let pm = PublicManifest::new(vec![PublicManifestEntry {
+            path: "a.txt".into(),
+            latest_root: Bytes32([0x12; 32]),
+            generation_index: 1,
+            sha256_latest: Bytes32([0x34; 32]),
+            version_count: 1,
+        }]);
+        inp.public_manifest = Some(pm.clone());
+        let blob = encode_data_section(&inp);
+        let new_keys = vec![TrustedHostKey {
+            public_key: [0x99u8; 48],
+            label: "new".into(),
+        }];
+        let rebuilt = rekey_blob_trusted(&blob, &new_keys).expect("rekey");
+        // PublicManifest preserved byte-for-byte through the rekey.
+        assert_eq!(read_public_manifest(&rebuilt).unwrap().unwrap(), pm);
+    }
+
+    #[test]
+    fn rekey_preserves_chain_state() {
+        use dig_capsule_core::datasection::{read_chain_state, ChainState, SectionId};
+        // Build a blob WITH a ChainState section, then exercise the same
+        // optional-passthrough logic rekey uses by parsing + rebuilding.
+        let mut inp = inputs();
+        let cs = ChainState {
+            version: 1,
+            network: "mainnet".into(),
+            launcher_id: inp.store_id,
+            coin_id: Bytes32([7u8; 32]),
+            confirmed_height: 42,
+            tx_id: "deadbeef".into(),
+            coinset_url: "https://api.coinset.org".into(),
+        };
+        inp.chain_state = Some(cs.clone());
+        let blob = encode_data_section(&inp);
+
+        let new_keys = vec![TrustedHostKey {
+            public_key: [0x99u8; 48],
+            label: "new".into(),
+        }];
+        let rebuilt = rekey_blob_trusted(&blob, &new_keys).expect("rekey");
+
+        // ChainState preserved byte-for-byte through the rekey.
+        assert_eq!(read_chain_state(&rebuilt).unwrap().unwrap(), cs);
+        // TrustedKeys actually swapped (new framing differs from the old).
+        let view = DataView::parse(&rebuilt).unwrap();
+        assert_eq!(
+            view.section(SectionId::TrustedKeys).unwrap(),
+            &encode_trusted_keys(&new_keys)[..]
+        );
+    }
+
+    #[test]
+    fn rekey_without_chain_state_is_fine() {
+        use dig_capsule_core::datasection::read_chain_state;
+        let inp = inputs(); // no chain_state
+        let blob = encode_data_section(&inp);
+        let new_keys = vec![TrustedHostKey {
+            public_key: [0x99u8; 48],
+            label: "new".into(),
+        }];
+        let rebuilt = rekey_blob_trusted(&blob, &new_keys).expect("rekey");
+        assert!(read_chain_state(&rebuilt).unwrap().is_none());
+    }
+}

@@ -15,6 +15,10 @@ on:
   push:
     branches:
       - main
+  # Manual trigger — needed to KICK the FIRST crates.io publish: GitHub does not
+  # fire a `push: main` workflow on the squash-merge that first adds the workflow
+  # itself, and re-runs skip once a version is already tagged/published.
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
@@ -80,3 +84,88 @@ jobs:
           git push origin "HEAD:main"
           git push origin "${{ steps.ver.outputs.tag }}"
           echo "Pushed changelog commit + ${{ steps.ver.outputs.tag }} — deploy-on-tag will fire."
+
+  # Publish the workspace's member crates to crates.io in TOPOLOGICAL (bottom-up)
+  # order — a crate cannot publish before its dependencies are indexed. Runs after
+  # the changelog+tag job (so the release commit is the one published), and on a
+  # manual dispatch (first-publish kick). Idempotent: a crate whose version is
+  # already on crates.io is skipped, so a re-run after a partial failure resumes.
+  #
+  # `--no-verify` skips cargo's redundant isolated verify build: the full workspace
+  # is already built + tested on every PR by ci.yml (the real gate), and an isolated
+  # verify would need the guest wasm embedded by dig-capsule-stage's build.rs and the
+  # RISC0 toolchain for the guest — neither of which the publish runner has. crates.io
+  # still validates that every dependency exists at publish time, so ORDER is enforced.
+  publish-crates:
+    name: Publish crates to crates.io
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        run: rustup show
+
+      - name: Publish members bottom-up (idempotent, waits for indexing)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # crate name -> manifest path. `dig-capsule-guest-risc0` is the excluded
+          # RISC0 guest (an optional dep of dig-capsule-prover), published before it
+          # so crates.io can resolve the optional dependency.
+          declare -a ORDER=(
+            "dig-capsule-core:crates/dig-capsule-core/Cargo.toml"
+            "dig-capsule-chunker:crates/dig-capsule-chunker/Cargo.toml"
+            "dig-capsule-crypto:crates/dig-capsule-crypto/Cargo.toml"
+            "dig-capsule-guest:crates/dig-capsule-guest/Cargo.toml"
+            "dig-capsule-guest-risc0:crates/dig-capsule-prover/guest/Cargo.toml"
+            "dig-capsule-store:crates/dig-capsule-store/Cargo.toml"
+            "dig-capsule-prover:crates/dig-capsule-prover/Cargo.toml"
+            "dig-capsule-host:crates/dig-capsule-host/Cargo.toml"
+            "dig-capsule-compiler:crates/dig-capsule-compiler/Cargo.toml"
+            "dig-capsule-stage:crates/dig-capsule-stage/Cargo.toml"
+          )
+
+          crate_version() {
+            python3 -c 'import sys,tomllib
+d=tomllib.load(open(sys.argv[1],"rb"))
+p=d.get("package",{})
+v=p.get("version")
+if isinstance(v,dict) or v is None:  # inherits workspace
+    w=tomllib.load(open("Cargo.toml","rb"))
+    v=w["workspace"]["package"]["version"]
+print(v)' "$1"
+          }
+
+          already_published() { # name version -> 0 if present on crates.io
+            local n="$1" v="$2"
+            curl -sf "https://crates.io/api/v1/crates/${n}/${v}" >/dev/null 2>&1
+          }
+
+          wait_indexed() {
+            local n="$1" v="$2"
+            for _ in $(seq 1 60); do
+              if already_published "$n" "$v"; then echo "  indexed: $n $v"; return 0; fi
+              sleep 10
+            done
+            echo "::error::timed out waiting for $n $v to index on crates.io"; return 1
+          }
+
+          for entry in "${ORDER[@]}"; do
+            name="${entry%%:*}"; manifest="${entry#*:}"
+            ver="$(crate_version "$manifest")"
+            if already_published "$name" "$ver"; then
+              echo "SKIP $name $ver (already on crates.io)"
+              continue
+            fi
+            echo "PUBLISH $name $ver"
+            cargo publish --manifest-path "$manifest" --no-verify
+            wait_indexed "$name" "$ver"
+          done
+          echo "All member crates published."

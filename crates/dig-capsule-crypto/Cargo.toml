@@ -1,0 +1,23 @@
+[package]
+name = "dig-capsule-crypto"
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+edition.workspace = true
+description = "Host-side cryptography for the DIG Network .dig format: URN key derivation, AES-256-GCM chunk encryption, and Chia AugScheme BLS."
+
+[dependencies]
+# The AES-256-GCM-SIV seal + HKDF derivation now live in `dig_capsule_core::crypto`
+# (the single source of truth shared with the producer + browser verifier); this
+# crate re-exports them via `aead`/`kdf` and adds BLS. So `aes-gcm-siv`/`hkdf` are
+# no longer direct deps here — they come transitively through `dig-capsule-core`.
+dig-capsule-core = { workspace = true }
+sha2 = "0.10"
+chia-bls = "=0.45.0"
+hex = "0.4"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"

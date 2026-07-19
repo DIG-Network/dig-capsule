@@ -1,0 +1,39 @@
+[package]
+name = "dig-capsule-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core read-crypto and format primitives for the DIG Network store (.dig) format: capsules, manifests, merkle proofs, URN grammar, and the AES-256-GCM-SIV chunk seal."
+repository.workspace = true
+readme = "README.md"
+keywords = ["dig", "chia", "content-addressed", "merkle", "storage"]
+categories = ["cryptography", "encoding", "data-structures"]
+
+[lib]
+name = "dig_capsule_core"
+path = "src/lib.rs"
+
+[features]
+default = ["std", "serde"]
+std = ["sha2/std", "hex/std", "serde_json/std"]
+serde = ["dep:serde"]
+
+[dependencies]
+sha2 = { version = "0.10", default-features = false }
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+serde = { version = "1", default-features = false, features = ["derive", "alloc"], optional = true }
+# Symmetric read-crypto (paper §11) — the AES-256-GCM-SIV chunk seal + HKDF
+# content-key derivation now live in `dig_capsule_core::crypto`, the ONE place every
+# layer (producer, host, browser verifier) shares. `aes-gcm-siv` default features
+# are OFF so it never drags in `getrandom` (encryption is under a fixed nonce, no
+# RNG) — keeping the crate wasm-clean for `dig-capsule-wasm`.
+aes-gcm-siv = { version = "0.11", default-features = false, features = ["aes", "alloc"] }
+hkdf = { version = "0.12", default-features = false }
+
+# Test-only: load + (re)generate the frozen URN conformance vectors
+# (tests/fixtures/urn_conformance.json, gap #128). std-enabled so the vector loader
+# uses real std I/O + serde derive; not pulled into the wasm-clean library build.
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }

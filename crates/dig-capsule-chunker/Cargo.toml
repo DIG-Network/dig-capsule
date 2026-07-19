@@ -1,0 +1,15 @@
+[package]
+name = "dig-capsule-chunker"
+license.workspace = true
+version.workspace = true
+edition.workspace = true
+description = "Content-defined FastCDC chunker for the DIG Network .dig store format."
+repository.workspace = true
+
+[dependencies]
+dig-capsule-core = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+hex = { workspace = true }

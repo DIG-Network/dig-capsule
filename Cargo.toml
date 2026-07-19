@@ -2,35 +2,49 @@
 resolver = "2"
 # The `.dig` store DATA PLANE, lifted from dig-store (epic #744 Phase 1): the DIGS
 # format, the compiler (files -> capsule), the capsule read-crypto, staging, and the
-# guest/host serve triad. The crate NAMES are preserved verbatim from dig-store so
-# consumers change only the git URL, not their `use` paths (cosmetic rename deferred).
+# guest/host serve triad. Member crates are named `dig-capsule-*` (Option B naming,
+# #1247); each is published to crates.io in topological order (see release.yml).
 members = [
-  "crates/digstore-core",
-  "crates/digstore-chunker",
-  "crates/digstore-crypto",
-  "crates/digstore-store",
-  "crates/digstore-guest",
-  "crates/digstore-prover",
-  "crates/digstore-host",
-  "crates/digstore-compiler",
-  "crates/digstore-stage",
+  "crates/dig-capsule-core",
+  "crates/dig-capsule-chunker",
+  "crates/dig-capsule-crypto",
+  "crates/dig-capsule-store",
+  "crates/dig-capsule-guest",
+  "crates/dig-capsule-prover",
+  "crates/dig-capsule-host",
+  "crates/dig-capsule-compiler",
+  "crates/dig-capsule-stage",
 ]
-# `digstore-prover/guest` is the RISC0 zkVM guest (built only under the `risc0`
-# feature with the RISC0 toolchain). `dig-client-wasm` is the browser read-crypto
+# `dig-capsule-prover/guest` is the RISC0 zkVM guest (built only under the `risc0`
+# feature with the RISC0 toolchain). `dig-capsule-wasm` is the browser read-crypto
 # behind `@dignetwork/dig-capsule-wasm`: it is wasm32-only and resolved independently with
-# its own Cargo.lock (its `digstore-crypto` -> `chia-bls` -> `blst` C/asm does not
+# its own Cargo.lock (its `dig-capsule-crypto` -> `chia-bls` -> `blst` C/asm does not
 # compile to wasm32), so it is EXCLUDED from the native workspace build.
-exclude = ["crates/digstore-prover/guest", "crates/dig-client-wasm"]
+exclude = ["crates/dig-capsule-prover/guest", "crates/dig-capsule-wasm"]
 
 [workspace.package]
 edition = "2021"
-version = "0.1.3"
+version = "0.2.0"
 license = "GPL-2.0-only"
+repository = "https://github.com/DIG-Network/dig-capsule"
 
 [workspace.dependencies]
 sha2 = "0.10"
 proptest = "1"
 hex = "0.4"
+
+# Internal crates carry BOTH a path (used for in-workspace builds) AND a version
+# (used by `cargo publish` — crates.io forbids path-only deps). Members reference
+# these via `{ workspace = true }` so the version lives in exactly one place.
+# `dig-capsule-compiler` is pinned to 1.0.0 by SPEC §5 (see its Cargo.toml).
+dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.2.0" }
+dig-capsule-chunker = { path = "crates/dig-capsule-chunker", version = "0.2.0" }
+dig-capsule-crypto = { path = "crates/dig-capsule-crypto", version = "0.2.0" }
+dig-capsule-store = { path = "crates/dig-capsule-store", version = "0.2.0" }
+dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.0" }
+dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.0" }
+dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.0" }
+dig-capsule-compiler = { path = "crates/dig-capsule-compiler", version = "1.0.0" }
 
 # Release hardening: keep integer-overflow checks ON in release builds. This code
 # parses untrusted serialized input and does offset/length arithmetic; silent

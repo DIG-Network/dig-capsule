@@ -1,0 +1,68 @@
+use dig_capsule_crypto::fixtures::KdfFixtureSet;
+
+#[test]
+fn committed_kdf_fixture_matches_generated() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("kdf_kat.json");
+    let on_disk = std::fs::read_to_string(&path).expect(
+        "committed kdf_kat.json must exist; run: cargo run -p dig-capsule-crypto --example gen_fixtures",
+    );
+    let parsed: KdfFixtureSet = serde_json::from_str(&on_disk).unwrap();
+    let fresh = KdfFixtureSet::generate();
+
+    assert_eq!(parsed.crypto_version, fresh.crypto_version);
+    assert_eq!(parsed.vectors.len(), fresh.vectors.len());
+    for (a, b) in parsed.vectors.iter().zip(fresh.vectors.iter()) {
+        assert_eq!(a.name, b.name);
+        assert_eq!(a.canonical_urn, b.canonical_urn);
+        assert_eq!(a.secret_salt_hex, b.secret_salt_hex);
+        assert_eq!(a.key_hex, b.key_hex, "KDF output drift in '{}'", a.name);
+    }
+}
+
+#[test]
+fn derive_decryption_key_public_is_32_bytes_and_deterministic() {
+    let canonical =
+        "urn:dig:mainnet:1111111111111111111111111111111111111111111111111111111111111111/file.txt";
+    let k1 = dig_capsule_crypto::derive_decryption_key(canonical, None);
+    let k2 = dig_capsule_crypto::derive_decryption_key(canonical, None);
+    assert_eq!(k1.len(), 32);
+    assert_eq!(k1, k2, "derivation must be deterministic for a given URN");
+}
+
+#[test]
+fn two_distinct_urns_yield_two_distinct_keys() {
+    let a =
+        "urn:dig:mainnet:1111111111111111111111111111111111111111111111111111111111111111/a.txt";
+    let b =
+        "urn:dig:mainnet:1111111111111111111111111111111111111111111111111111111111111111/b.txt";
+    let ka = dig_capsule_crypto::derive_decryption_key(a, None);
+    let kb = dig_capsule_crypto::derive_decryption_key(b, None);
+    assert_ne!(
+        ka, kb,
+        "distinct URNs MUST derive distinct keys (fixed-nonce safety)"
+    );
+}
+
+#[test]
+fn public_and_private_same_urn_yield_distinct_keys() {
+    use dig_capsule_core::SecretSalt;
+    let u = "urn:dig:mainnet:2222222222222222222222222222222222222222222222222222222222222222/a";
+    let pub_k = dig_capsule_crypto::derive_decryption_key(u, None);
+    let priv_k = dig_capsule_crypto::derive_decryption_key(u, Some(&SecretSalt([0x09; 32])));
+    assert_ne!(
+        pub_k, priv_k,
+        "private store must not collide with public key for same URN"
+    );
+}
+
+#[test]
+fn two_private_salts_same_urn_yield_distinct_keys() {
+    use dig_capsule_core::SecretSalt;
+    let u = "urn:dig:mainnet:2222222222222222222222222222222222222222222222222222222222222222/a";
+    let k1 = dig_capsule_crypto::derive_decryption_key(u, Some(&SecretSalt([0x01; 32])));
+    let k2 = dig_capsule_crypto::derive_decryption_key(u, Some(&SecretSalt([0x02; 32])));
+    assert_ne!(k1, k2, "different SecretSalts must derive different keys");
+}
