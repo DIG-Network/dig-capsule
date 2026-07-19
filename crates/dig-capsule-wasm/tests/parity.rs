@@ -12,7 +12,9 @@
 
 use dig_capsule_core::codec::{Decode, Encode};
 use dig_capsule_core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
-use dig_capsule_core::{resource_leaf, Bytes32, MerkleProof, MerkleTree, ProofStep, SecretSalt, Urn};
+use dig_capsule_core::{
+    resource_leaf, Bytes32, MerkleProof, MerkleTree, ProofStep, SecretSalt, Urn,
+};
 
 fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
     Urn {

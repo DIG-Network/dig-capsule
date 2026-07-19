@@ -1,9 +1,9 @@
 //! The `readPublicManifest` reader: decode a `.dig` data-section blob's normalized
 //! public manifest to JSON, and tolerate its absence (older `.dig` / private store).
 
-use dig_client_wasm::read_public_manifest;
 use dig_capsule_core::datasection::{encode_blob, encode_public_manifest, SectionId};
 use dig_capsule_core::{Bytes32, PublicManifest, PublicManifestEntry};
+use dig_capsule_wasm::read_public_manifest;
 
 fn blob_with_manifest(pm: &PublicManifest) -> Vec<u8> {
     encode_blob(&[
