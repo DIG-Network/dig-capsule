@@ -133,14 +133,7 @@ jobs:
           )
 
           crate_version() {
-            python3 -c 'import sys,tomllib
-d=tomllib.load(open(sys.argv[1],"rb"))
-p=d.get("package",{})
-v=p.get("version")
-if isinstance(v,dict) or v is None:  # inherits workspace
-    w=tomllib.load(open("Cargo.toml","rb"))
-    v=w["workspace"]["package"]["version"]
-print(v)' "$1"
+            python3 -c 'import sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); p=d.get("package",{}); v=p.get("version"); v=(tomllib.load(open("Cargo.toml","rb"))["workspace"]["package"]["version"] if (isinstance(v,dict) or v is None) else v); print(v)' "$1"
           }
 
           already_published() { # name version -> 0 if present on crates.io
