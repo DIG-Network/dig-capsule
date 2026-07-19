@@ -20,21 +20,21 @@ names (`dig-capsule-core`, …) are preserved so consumers change only the git U
 - A **capsule** is one immutable store generation: the pair `(store_id, root_hash)`,
   each a 32-byte value.
 - Canonical string form is `storeId:rootHash` — lowercase hex, colon-separated
-  (`digstore_core::Capsule::{canonical, from_canonical}`). A store is a sequence
+  (`dig_capsule_core::Capsule::{canonical, from_canonical}`). A store is a sequence
   of capsules identified by `store_id`; each capsule is one on-chain-anchored root.
 - The content URN is `urn:dig:chia:<store_id>[/<resource_key>]` (root-independent)
   or the display form `urn:dig:chia:<store_id>:<root>/<resource_key>`
-  (`digstore_core::urn`). The `retrieval_key` is derived from the canonical URN and
+  (`dig_capsule_core::urn`). The `retrieval_key` is derived from the canonical URN and
   is the stable per-resource lookup key; this derivation is FROZEN.
 
 ## 2. The DIGS data section
 
 - Magic `DIGS` (4 bytes), then a `u8` `format_version` = **1**, then an offset
-  table of `(section_id: u16, offset, len)` entries (`digstore_core::codec::section`,
-  `digstore_core::datasection`).
+  table of `(section_id: u16, offset, len)` entries (`dig_capsule_core::codec::section`,
+  `dig_capsule_core::datasection`).
 - Section ids form a registry (store id, current root, root history, store pubkey,
   trusted host keys, metadata manifest, authentication info, key table, merkle
-  leaves, chunks, public manifest, …). See `digstore_core::datasection::SectionId`.
+  leaves, chunks, public manifest, …). See `dig_capsule_core::datasection::SectionId`.
 - **Backwards compatibility (HARD, CLAUDE.md §5.1): additive only.** New
   section ids and new optional fields may be added. Existing section ids MUST NOT
   be removed, renumbered, or repurposed; an existing field's meaning/encoding MUST
@@ -49,12 +49,12 @@ names (`dig-capsule-core`, …) are preserved so consumers change only the git U
 
 - Per-resource content is chunked (`dig-capsule-chunker`), then each chunk is sealed
   with AES-256-GCM-SIV under a key derived by HKDF from the canonical resource URN
-  (and, for private stores, a 32-byte secret salt) (`digstore_core::crypto`,
+  (and, for private stores, a 32-byte secret salt) (`dig_capsule_core::crypto`,
   `dig-capsule-crypto`). The host serves ciphertext and is BLIND to plaintext.
 - Content commitment is a Merkle tree over the sealed chunk leaves; a served
   `ContentResponse` carries a merkle inclusion proof that verifies to the capsule
   root, plus per-chunk ciphertext lengths so a streaming client can split and
-  GCM-SIV-open each chunk (`digstore_core::merkle`, `digstore_core::serving`).
+  GCM-SIV-open each chunk (`dig_capsule_core::merkle`, `dig_capsule_core::serving`).
 - The verifier leaf-binding contract: a served leaf MUST equal
   `sha256(served ciphertext)`. The browser read path (`dig-capsule-wasm`) recomputes
   the leaf from received bytes and rejects a mismatch.
@@ -83,12 +83,12 @@ names (`dig-capsule-core`, …) are preserved so consumers change only the git U
 ## 5. The capsule size ladder
 
 - Capsules are padded to a uniform blob sized by a **size class**
-  (`digstore_core::capsule_class::CapsuleClass` / `CapsuleSpec`).
+  (`dig_capsule_core::capsule_class::CapsuleClass` / `CapsuleSpec`).
 - The ladder is powers of 2 MB from 2 MB up to the first rung ≥ 1 GB:
   `{2, 4, 8, 16, 32, 64, 128, 256, 512, 1024} × 10^6 bytes` (each rung is
   `2 MB · 2^k`, `k = 0..=9`; `1024 MB` is the top).
 - **DEFAULT = `CapsuleClass::Mb128`** (128 MB): its content cap is exactly
-  `digstore_core::MAX_STORE_BYTES = 128_000_000`, THE single canonical
+  `dig_capsule_core::MAX_STORE_BYTES = 128_000_000`, THE single canonical
   capsule-size number (#130). Its uniform blob is 128 MiB
   (`dig-capsule-compiler::FIXED_BLOB_LEN`), and the invariant
   `uniform_blob_len >= content_cap_bytes` holds for every rung.

@@ -13,7 +13,7 @@ that are produced from the other crates (not checked in):
 
    ```sh
    cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
-   # -> target/wasm32-unknown-unknown/release/digstore_guest.wasm
+   # -> target/wasm32-unknown-unknown/release/dig_capsule_guest.wasm
    ```
 
 2. Seed a tiny store and compile it with `dig-capsule-compiler` (once that crate

@@ -1,5 +1,5 @@
 {
-  "_comment": "FROZEN normative URN conformance vectors (gap #128). Grammar: digstore_core::urn_grammar (URN_ABNF). Regenerate via `cargo test -p dig-capsule-core --test urn_conformance -- --ignored regenerate`. retrieval_key_hex = SHA-256(canonical) lowercase hex.",
+  "_comment": "FROZEN normative URN conformance vectors (gap #128). Grammar: dig_capsule_core::urn_grammar (URN_ABNF). Regenerate via `cargo test -p dig-capsule-core --test urn_conformance -- --ignored regenerate`. retrieval_key_hex = SHA-256(canonical) lowercase hex.",
   "canonical_chain": "chia",
   "invalid": [
     {

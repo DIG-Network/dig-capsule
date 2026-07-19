@@ -19,7 +19,7 @@ it MUST exist before anything that compiles the stage/compiler engines:
 
     cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
 
-This produces `target/wasm32-unknown-unknown/release/digstore_guest.wasm`. If you
+This produces `target/wasm32-unknown-unknown/release/dig_capsule_guest.wasm`. If you
 build with a custom `CARGO_TARGET_DIR`, either copy that artifact to the workspace
 `target/...` path (some runtime tests read it there) or set
 `DIGSTORE_GUEST_WASM=<abs path>` so the build.rs picks it up.

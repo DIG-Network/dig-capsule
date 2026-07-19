@@ -37,7 +37,7 @@ splitting a multi-chunk resource by the per-chunk ciphertext lengths
 `dig-capsule-crypto` depends on `chia-bls` -> `blst` (a C/asm library that does not
 compile to `wasm32-unknown-unknown`) and on `getrandom`. BLS and randomness are
 on the *write/serve* path, **not** the read path. This crate is therefore
-excluded from the `digstore_wasm` workspace and resolved independently: it depends
+excluded from the `dig_capsule_wasm` workspace and resolved independently: it depends
 only on `dig-capsule-core` (pure, wasm-clean) for `Urn` / `MerkleProof` / `Bytes32` /
 `sha256`, plus the **same** `aes-gcm-siv` / `hkdf` / `sha2` versions and
 byte-identical domain constants reproduced in `src/crypto.rs`. The native
