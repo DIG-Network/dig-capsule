@@ -1,7 +1,7 @@
 # Runbook — dig-capsule (build, test, publish)
 
 The `.dig` capsule data plane: a Cargo workspace (9 crates) plus the
-`@dignetwork/dig-capsule-wasm` wasm npm package (built from `crates/dig-client-wasm`).
+`@dignetwork/dig-capsule-wasm` wasm npm package (built from `crates/dig-capsule-wasm`).
 
 ## Prerequisites
 
@@ -14,10 +14,10 @@ The `.dig` capsule data plane: a Cargo workspace (9 crates) plus the
 
 ## Build prerequisite — the guest wasm (bites every fresh checkout)
 
-`digstore-stage`'s `build.rs` embeds the REAL guest wasm (BINDING contract D6), so
+`dig-capsule-stage`'s `build.rs` embeds the REAL guest wasm (BINDING contract D6), so
 it MUST exist before anything that compiles the stage/compiler engines:
 
-    cargo build -p digstore-guest --target wasm32-unknown-unknown --release
+    cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
 
 This produces `target/wasm32-unknown-unknown/release/digstore_guest.wasm`. If you
 build with a custom `CARGO_TARGET_DIR`, either copy that artifact to the workspace
@@ -43,7 +43,7 @@ instrumentation; it still runs in the plain `cargo test` job.)
 
 ## The wasm npm package (@dignetwork/dig-capsule-wasm)
 
-From `crates/dig-client-wasm` (excluded from the workspace — wasm32-only):
+From `crates/dig-capsule-wasm` (excluded from the workspace — wasm32-only):
 
     npm run build:pkg        # wasm-pack web + node, assemble ./pkg
     cargo run --example gen_smoke_fixture > smoke_fixture.json

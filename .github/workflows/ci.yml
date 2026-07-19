@@ -73,8 +73,8 @@ jobs:
 
       # The stage/compiler engines embed the REAL guest wasm (BINDING contract
       # D6), so the wasm32 guest must be built before anything that compiles them.
-      - name: Build guest wasm (required by digstore-stage build.rs)
-        run: cargo build -p digstore-guest --target wasm32-unknown-unknown --release
+      - name: Build guest wasm (required by dig-capsule-stage build.rs)
+        run: cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
 
       - name: Format check
         if: matrix.os == 'ubuntu-latest'
@@ -133,8 +133,8 @@ jobs:
         with:
           tool: cargo-llvm-cov,nextest
 
-      - name: Build guest wasm (required by digstore-stage build.rs)
-        run: cargo build -p digstore-guest --target wasm32-unknown-unknown --release
+      - name: Build guest wasm (required by dig-capsule-stage build.rs)
+        run: cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
 
       # Gate the pure data-plane logic. The wasmtime host glue and the RISC0
       # backend are exercised by integration tests, not unit-counted here.
@@ -169,36 +169,36 @@ jobs:
           node-version: 20
 
       - name: Format check
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: cargo fmt --check
 
       - name: Clippy (deny warnings)
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: cargo clippy --all-targets -- -D warnings
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Parity tests (native, vs digstore-crypto; flaky-aware)
-        working-directory: crates/dig-client-wasm
+      - name: Parity tests (native, vs dig-capsule-crypto; flaky-aware)
+        working-directory: crates/dig-capsule-wasm
         run: cargo nextest run --retries 2
 
       - name: Parity doctests
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: cargo test --doc
 
       - name: Build + assemble the dual-target package (web + node -> pkg/)
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: npm run build:pkg
 
       - name: Generate real-crypto smoke fixture
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: cargo run --example gen_smoke_fixture > smoke_fixture.json
 
       - name: Node test — verify assembled package end-to-end
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: node scripts/verify-pkg.mjs
 
       - name: Real-browser test (headless Chrome)
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
         run: wasm-pack test --headless --chrome --test browser

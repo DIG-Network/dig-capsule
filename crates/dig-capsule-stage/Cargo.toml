@@ -1,0 +1,25 @@
+[package]
+name = "dig-capsule-stage"
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+edition.workspace = true
+description = "Context-free stage→compile engine: turn an in-memory file set (or a folder) into a self-serving dig-capsule (.dig module) — the SAME pipeline the CLI `commit`/`compile`/`deploy` use, callable in-process by the DIG Browser's native dig-node (no CLI binary)."
+
+[lib]
+name = "dig_capsule_stage"
+path = "src/lib.rs"
+
+[dependencies]
+dig-capsule-core = { path = "../dig-capsule-core" }
+dig-capsule-store = { path = "../dig-capsule-store" }
+dig-capsule-chunker = { path = "../dig-capsule-chunker" }
+dig-capsule-crypto = { path = "../dig-capsule-crypto" }
+dig-capsule-compiler = { path = "../dig-capsule-compiler" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+hex = "0.4"
+
+[dev-dependencies]
+tempfile = "3"

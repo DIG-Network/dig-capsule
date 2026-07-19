@@ -1,0 +1,30 @@
+[package]
+name = "dig-capsule-compiler"
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+edition.workspace = true
+description = "dig-compiler: deterministic transform from on-disk generations to a self-serving WASM module (paper 5, 8.3, 17.1, 19)."
+
+[dependencies]
+dig-capsule-core = { path = "../dig-capsule-core" }
+dig-capsule-store = { path = "../dig-capsule-store" }
+# `wasmparser` feature enables `wasm_encoder::reencode` (operator round-trip),
+# used by the §17.1 obfuscation pass to decode + re-encode the code section.
+wasm-encoder = { version = "0.221", features = ["wasmparser"] }
+wasmparser = "0.221"
+chacha20 = "0.9"
+sha2 = "0.10"
+hex = "0.4"
+thiserror = "1"
+
+[build-dependencies]
+wat = "1"
+
+[dev-dependencies]
+wasmtime = "45"
+wasmparser = "0.221"
+wat = "1"
+dig-capsule-host = { path = "../dig-capsule-host" }
+dig-capsule-prover = { path = "../dig-capsule-prover" }
+dig-capsule-crypto = { path = "../dig-capsule-crypto" }

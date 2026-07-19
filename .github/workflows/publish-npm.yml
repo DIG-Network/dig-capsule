@@ -2,7 +2,7 @@ name: publish-npm
 
 # Publish the capsule read-crypto WASM as @dignetwork/dig-capsule-wasm. Assembles a
 # DUAL-TARGET package (wasm-bindgen `web` ESM + `nodejs` CommonJS) via
-# crates/dig-client-wasm's build:pkg, so it imports cleanly in BOTH a browser
+# crates/dig-capsule-wasm's build:pkg, so it imports cleanly in BOTH a browser
 # bundler (Vite/webpack) AND a Node.js service, then publishes the assembled
 # ./pkg. Auth uses npm OIDC trusted publishing (no NPM_TOKEN): the job's
 # id-token is exchanged for a short-lived publish credential by npm >= 11.5.1.
@@ -30,7 +30,7 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: crates/dig-client-wasm
+        working-directory: crates/dig-capsule-wasm
     steps:
       - uses: actions/checkout@v4
         with:
