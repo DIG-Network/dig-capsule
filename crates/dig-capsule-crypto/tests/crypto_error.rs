@@ -1,5 +1,7 @@
 use dig_capsule_core::Bytes48;
-use dig_capsule_crypto::{bls, decrypt_and_unwrap, encrypt_chunk, BlsError, CryptoError, TamperError};
+use dig_capsule_crypto::{
+    bls, decrypt_and_unwrap, encrypt_chunk, BlsError, CryptoError, TamperError,
+};
 
 #[test]
 fn decrypt_and_unwrap_ok_path() {

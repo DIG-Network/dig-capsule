@@ -403,7 +403,10 @@ fn resolve_unknown_chunk_errors() {
     let _r = store.commit().unwrap();
     let bogus = Bytes32([0xCDu8; 32]);
     let err = store.resolve_chunk(bogus).unwrap_err();
-    assert!(matches!(err, dig_capsule_store::StoreError::ChunkNotFound(_)));
+    assert!(matches!(
+        err,
+        dig_capsule_store::StoreError::ChunkNotFound(_)
+    ));
 }
 
 #[test]

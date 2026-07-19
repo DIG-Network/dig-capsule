@@ -33,6 +33,19 @@ sha2 = "0.10"
 proptest = "1"
 hex = "0.4"
 
+# Internal crates carry BOTH a path (used for in-workspace builds) AND a version
+# (used by `cargo publish` — crates.io forbids path-only deps). Members reference
+# these via `{ workspace = true }` so the version lives in exactly one place.
+# `dig-capsule-compiler` is pinned to 1.0.0 by SPEC §5 (see its Cargo.toml).
+dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.2.0" }
+dig-capsule-chunker = { path = "crates/dig-capsule-chunker", version = "0.2.0" }
+dig-capsule-crypto = { path = "crates/dig-capsule-crypto", version = "0.2.0" }
+dig-capsule-store = { path = "crates/dig-capsule-store", version = "0.2.0" }
+dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.0" }
+dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.0" }
+dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.0" }
+dig-capsule-compiler = { path = "crates/dig-capsule-compiler", version = "1.0.0" }
+
 # Release hardening: keep integer-overflow checks ON in release builds. This code
 # parses untrusted serialized input and does offset/length arithmetic; silent
 # wrapping in release would turn a length-overflow bug into a memory-safety / logic

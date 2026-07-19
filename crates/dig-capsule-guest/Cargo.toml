@@ -16,7 +16,11 @@ native-test = ["std", "dig-capsule-core/std"]
 std = []
 
 [dependencies]
-dig-capsule-core = { path = "../dig-capsule-core", default-features = false }
+# Inline (not `workspace = true`) because the guest is wasm32-only and needs the
+# no-std core: `default-features = false` is IGNORED on a workspace dep unless the
+# workspace root also disables them, and the std consumers (store/host/…) need the
+# defaults ON. Version is pinned for crates.io publish.
+dig-capsule-core = { path = "../dig-capsule-core", version = "0.2.0", default-features = false }
 bls12_381 = { version = "0.8", default-features = false, features = ["alloc", "pairings", "groups", "experimental"] }
 rsa = { version = "0.9", default-features = false, features = ["sha2"] }
 p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
@@ -31,7 +35,7 @@ base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 serde_json = { version = "1", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-dig-capsule-crypto = { path = "../dig-capsule-crypto" }
+dig-capsule-crypto = { workspace = true }
 serde_json = { version = "1", default-features = false, features = ["alloc", "std"] }
 hex = "0.4"
 wasmparser = "0.221"

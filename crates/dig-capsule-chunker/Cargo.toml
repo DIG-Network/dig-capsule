@@ -7,7 +7,7 @@ description = "Content-defined FastCDC chunker for the DIG Network .dig store fo
 repository.workspace = true
 
 [dependencies]
-dig-capsule-core = { path = "../dig-capsule-core" }
+dig-capsule-core = { workspace = true }
 sha2 = { workspace = true }
 
 [dev-dependencies]

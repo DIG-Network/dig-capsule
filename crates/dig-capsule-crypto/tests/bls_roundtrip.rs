@@ -214,7 +214,11 @@ fn sign_push_then_verify_push_round_trip_and_binding() {
     let other_root = Bytes32([0xDDu8; 32]);
     assert!(!verify_push(&pk, &other_root, &store_id, &sig));
     // Signing over the RAW concat (not its hash) would not verify.
-    assert!(!dig_capsule_crypto::bls_verify(&pk.to_bytes(), &concat, &sig));
+    assert!(!dig_capsule_crypto::bls_verify(
+        &pk.to_bytes(),
+        &concat,
+        &sig
+    ));
 }
 
 #[test]
@@ -356,8 +360,14 @@ fn role_tags_domain_separate_identical_payloads() {
         dig_capsule_crypto::bls::PUSH_DST,
         dig_capsule_crypto::bls::NODE_DST
     );
-    assert_ne!(dig_capsule_crypto::bls::PUSH_DST, dig_capsule_core::ATTEST_DST);
-    assert_ne!(dig_capsule_crypto::bls::NODE_DST, dig_capsule_core::ATTEST_DST);
+    assert_ne!(
+        dig_capsule_crypto::bls::PUSH_DST,
+        dig_capsule_core::ATTEST_DST
+    );
+    assert_ne!(
+        dig_capsule_crypto::bls::NODE_DST,
+        dig_capsule_core::ATTEST_DST
+    );
 
     // Construct a push message and an attestation message over the SAME 64 payload
     // bytes (nonce||store_id vs root||store_id), then confirm the produced messages

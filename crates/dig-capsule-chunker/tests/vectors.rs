@@ -80,7 +80,10 @@ fn golden_boundaries_are_stable() {
 }
 
 /// Count shared trailing chunk content-addresses between two chunkings.
-fn shared_trailing_hashes(a: &[dig_capsule_chunker::Chunk], b: &[dig_capsule_chunker::Chunk]) -> usize {
+fn shared_trailing_hashes(
+    a: &[dig_capsule_chunker::Chunk],
+    b: &[dig_capsule_chunker::Chunk],
+) -> usize {
     let mut shared = 0usize;
     while shared < a.len()
         && shared < b.len()

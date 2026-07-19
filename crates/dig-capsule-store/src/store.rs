@@ -180,7 +180,8 @@ impl<C: Clock> Store<C> {
             let static_key = urn.retrieval_key();
             // Per-URN AES-256 key (§11.1): public store uses the fixed salt domain,
             // private store mixes the secret salt.
-            let aes_key = dig_capsule_crypto::derive_decryption_key(&urn.canonical(), salt.as_ref());
+            let aes_key =
+                dig_capsule_crypto::derive_decryption_key(&urn.canonical(), salt.as_ref());
 
             let chunks = chunk_slice(&rec.content, &chunker);
             let mut indices = Vec::with_capacity(chunks.len());

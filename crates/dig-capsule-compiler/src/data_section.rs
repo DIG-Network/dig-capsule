@@ -346,7 +346,9 @@ mod tests {
         decode_merkle_leaves, lookup_key, read_chunk, DataView, SectionId,
     };
     use dig_capsule_core::merkle::MerkleTree;
-    use dig_capsule_core::{AuthenticationInfo, Bytes32, Bytes48, Decode, Decoder, MetadataManifest};
+    use dig_capsule_core::{
+        AuthenticationInfo, Bytes32, Bytes48, Decode, Decoder, MetadataManifest,
+    };
 
     fn manifest() -> MetadataManifest {
         MetadataManifest {

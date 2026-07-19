@@ -188,7 +188,8 @@ pub fn build_prepared(
             // as ONE chunk — D5 leaf = SHA-256(these bytes). No chunking, no encryption here.
             vec![content.clone()]
         } else {
-            let aes_key = dig_capsule_crypto::derive_decryption_key(&urn.canonical(), salt.as_ref());
+            let aes_key =
+                dig_capsule_crypto::derive_decryption_key(&urn.canonical(), salt.as_ref());
             let chunks: Vec<Chunk> = chunk_slice(content, &chunker_config());
             let chunks = if chunks.is_empty() {
                 vec![Chunk::new(0, Vec::new())]

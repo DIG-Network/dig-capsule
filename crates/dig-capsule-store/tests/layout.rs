@@ -38,7 +38,10 @@ fn init_refuses_to_clobber_existing_store() {
     let dir = tempdir().unwrap();
     Store::init(config(dir.path()), FixedClock::new(1)).unwrap();
     let err = Store::init(config(dir.path()), FixedClock::new(1)).unwrap_err();
-    assert!(matches!(err, dig_capsule_store::StoreError::AlreadyExists(_)));
+    assert!(matches!(
+        err,
+        dig_capsule_store::StoreError::AlreadyExists(_)
+    ));
 }
 
 #[test]

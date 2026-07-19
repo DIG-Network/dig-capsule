@@ -7,9 +7,9 @@ edition.workspace = true
 description = "wasmtime runtime for serving compiled DIG Network .dig WASM modules (paper 6.3, 6.4, 18)."
 
 [dependencies]
-dig-capsule-core = { path = "../dig-capsule-core" }
-dig-capsule-crypto = { path = "../dig-capsule-crypto" }
-dig-capsule-prover = { path = "../dig-capsule-prover" }
+dig-capsule-core = { workspace = true }
+dig-capsule-crypto = { workspace = true }
+dig-capsule-prover = { workspace = true }
 wasmtime = { version = "45", default-features = false, features = ["std", "cranelift", "runtime", "gc", "gc-drc", "gc-null", "threads", "pooling-allocator", "parallel-compilation"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
 rand = "0.8"

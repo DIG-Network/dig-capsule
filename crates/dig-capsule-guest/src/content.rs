@@ -167,7 +167,8 @@ fn gate<H: DigHost + ?Sized>(
 
         // A real host returns a signed AttestationResponse; an error => fail closed.
         let resp_bytes = host.create_attestation(&challenge).map_err(|_| ())?;
-        let resp = dig_capsule_core::AttestationResponse::from_bytes(&resp_bytes).map_err(|_| ())?;
+        let resp =
+            dig_capsule_core::AttestationResponse::from_bytes(&resp_bytes).map_err(|_| ())?;
 
         // §12.2: verify the BLS signature over the challenge under
         // host_public_key, check the challenge timestamp for FRESHNESS against the

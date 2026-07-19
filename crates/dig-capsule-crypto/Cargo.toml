@@ -11,7 +11,7 @@ description = "Host-side cryptography for the DIG Network .dig format: URN key d
 # (the single source of truth shared with the producer + browser verifier); this
 # crate re-exports them via `aead`/`kdf` and adds BLS. So `aes-gcm-siv`/`hkdf` are
 # no longer direct deps here — they come transitively through `dig-capsule-core`.
-dig-capsule-core = { path = "../dig-capsule-core" }
+dig-capsule-core = { workspace = true }
 sha2 = "0.10"
 chia-bls = "=0.45.0"
 hex = "0.4"

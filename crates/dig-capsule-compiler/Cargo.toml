@@ -1,14 +1,17 @@
 [package]
 name = "dig-capsule-compiler"
 license.workspace = true
-version.workspace = true
+# Pinned to 1.0.0 by SPEC §5 ("Compiler version 1.0.0"): COMPILER_VERSION =
+# env!("CARGO_PKG_VERSION") is recorded in every compile outcome, so this crate is
+# versioned independently of the workspace and does NOT inherit version.workspace.
+version = "1.0.0"
 repository.workspace = true
 edition.workspace = true
 description = "dig-compiler: deterministic transform from on-disk generations to a self-serving WASM module (paper 5, 8.3, 17.1, 19)."
 
 [dependencies]
-dig-capsule-core = { path = "../dig-capsule-core" }
-dig-capsule-store = { path = "../dig-capsule-store" }
+dig-capsule-core = { workspace = true }
+dig-capsule-store = { workspace = true }
 # `wasmparser` feature enables `wasm_encoder::reencode` (operator round-trip),
 # used by the §17.1 obfuscation pass to decode + re-encode the code section.
 wasm-encoder = { version = "0.221", features = ["wasmparser"] }
@@ -25,6 +28,6 @@ wat = "1"
 wasmtime = "45"
 wasmparser = "0.221"
 wat = "1"
-dig-capsule-host = { path = "../dig-capsule-host" }
-dig-capsule-prover = { path = "../dig-capsule-prover" }
-dig-capsule-crypto = { path = "../dig-capsule-crypto" }
+dig-capsule-host = { workspace = true }
+dig-capsule-prover = { workspace = true }
+dig-capsule-crypto = { workspace = true }
