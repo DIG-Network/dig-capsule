@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org) and
 [Conventional Commits](https://www.conventionalcommits.org).
 
+## [0.2.1] - 2026-07-19
+
+### Features
+- Rename workspace members digstore-* -> dig-capsule-* + crates.io publish (#6)
+
+### Bug Fixes
+- **ci:** Single-line crate_version python in release.yml + bump to 0.2.1 (#7)
+
 ## [0.1.3] - 2026-07-18
 
 ### Chores
