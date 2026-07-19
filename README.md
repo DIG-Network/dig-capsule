@@ -30,3 +30,5 @@ preserved verbatim so consumers change only the git URL, not their `use` paths.
 - `runbooks/` — build, test, and publish procedures.
 
 Licensed GPL-2.0-only.
+
+<!-- WIP: rename digstore-* members -> dig-capsule-* + crates.io publish (#1247) -->
