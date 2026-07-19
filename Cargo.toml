@@ -24,7 +24,7 @@ exclude = ["crates/dig-capsule-prover/guest", "crates/dig-capsule-wasm"]
 
 [workspace.package]
 edition = "2021"
-version = "0.2.0"
+version = "0.2.1"
 license = "GPL-2.0-only"
 repository = "https://github.com/DIG-Network/dig-capsule"
 
@@ -37,13 +37,13 @@ hex = "0.4"
 # (used by `cargo publish` — crates.io forbids path-only deps). Members reference
 # these via `{ workspace = true }` so the version lives in exactly one place.
 # `dig-capsule-compiler` is pinned to 1.0.0 by SPEC §5 (see its Cargo.toml).
-dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.2.0" }
-dig-capsule-chunker = { path = "crates/dig-capsule-chunker", version = "0.2.0" }
-dig-capsule-crypto = { path = "crates/dig-capsule-crypto", version = "0.2.0" }
-dig-capsule-store = { path = "crates/dig-capsule-store", version = "0.2.0" }
-dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.0" }
-dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.0" }
-dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.0" }
+dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.2.1" }
+dig-capsule-chunker = { path = "crates/dig-capsule-chunker", version = "0.2.1" }
+dig-capsule-crypto = { path = "crates/dig-capsule-crypto", version = "0.2.1" }
+dig-capsule-store = { path = "crates/dig-capsule-store", version = "0.2.1" }
+dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.1" }
+dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.1" }
+dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.1" }
 dig-capsule-compiler = { path = "crates/dig-capsule-compiler", version = "1.0.0" }
 
 # Release hardening: keep integer-overflow checks ON in release builds. This code
