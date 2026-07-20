@@ -5,16 +5,20 @@
 //! Run: `cargo run -p dig-capsule-wasm --example gen_smoke_fixture`
 
 use dig_capsule_core::codec::Encode;
-use dig_capsule_core::{Bytes32, MerkleProof, MerkleTree, ProofStep, Urn};
+use dig_capsule_core::{Bytes32, MerkleProof, MerkleTree, ProofStep};
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
 
-fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
-    Urn {
+fn rootless_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
+    DigUrn {
         chain: "chia".to_string(),
-        store_id,
+        store_id: UrnBytes32(store_id.0),
         root_hash: None,
         resource_key: Some(resource_key.to_string()),
     }
-    .canonical()
+}
+
+fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
+    rootless_urn(store_id, resource_key).canonical()
 }
 
 fn b64(b: &[u8]) -> String {
@@ -71,14 +75,7 @@ fn main() {
         String::from_utf8(plaintext.clone())
             .unwrap()
             .replace('"', "\\\""),
-        Urn {
-            chain: "chia".to_string(),
-            store_id: store,
-            root_hash: None,
-            resource_key: Some(resource.to_string()),
-        }
-        .retrieval_key()
-        .to_hex(),
+        rootless_urn(store, resource).content_key().to_hex(),
         canonical,
     );
 }

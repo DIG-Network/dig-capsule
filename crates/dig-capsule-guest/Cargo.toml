@@ -20,7 +20,7 @@ std = []
 # no-std core: `default-features = false` is IGNORED on a workspace dep unless the
 # workspace root also disables them, and the std consumers (store/host/…) need the
 # defaults ON. Version is pinned for crates.io publish.
-dig-capsule-core = { path = "../dig-capsule-core", version = "0.2.0", default-features = false }
+dig-capsule-core = { path = "../dig-capsule-core", version = "0.3.0", default-features = false }
 bls12_381 = { version = "0.8", default-features = false, features = ["alloc", "pairings", "groups", "experimental"] }
 rsa = { version = "0.9", default-features = false, features = ["sha2"] }
 p256 = { version = "0.13", default-features = false, features = ["ecdsa"] }

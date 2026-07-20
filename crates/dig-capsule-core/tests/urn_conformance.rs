@@ -8,10 +8,10 @@
 //! conform to — the same way the KDF KAT (`crypto/tests/fixtures/kdf_kat.json`) and
 //! the merkle goldens are frozen.
 //!
-//! This test PROVES `dig_capsule_core`'s parser conforms to the frozen vectors and is the
-//! drift guard: if `Urn::parse` / `canonical()` / `retrieval_key()` ever change shape,
-//! one of these assertions fails. The grammar the vectors encode is documented in
-//! `dig_capsule_core::urn_grammar` (the normative ABNF).
+//! This test PROVES the consumed `dig_urn_protocol::DigUrn` parser conforms to the frozen
+//! vectors and is the drift guard: if `DigUrn::parse` / `canonical()` / `retrieval_key()`
+//! ever change shape, one of these assertions fails. The grammar the vectors encode is the
+//! normative ABNF in `dig_urn_protocol::grammar` (`URN_ABNF`).
 //!
 //! To regenerate the fixture after an INTENTIONAL, reviewed grammar change, run:
 //!   `cargo test -p dig-capsule-core --test urn_conformance -- --ignored regenerate`
@@ -19,7 +19,9 @@
 //! the canonical form, so the goldens can never be hand-mistyped).
 
 use dig_capsule_core::sha256;
-use dig_capsule_core::urn::Urn;
+// The canonical URN now lives in `dig-urn-protocol`; this conformance suite proves
+// the CONSUMED crate stays byte-identical to the frozen corpus (gap #128).
+use dig_urn_protocol::DigUrn as Urn;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -81,9 +83,11 @@ fn fixture_chain_matches_canonical_chain_constant() {
     );
     assert_eq!(
         set.canonical_chain,
-        dig_capsule_core::urn_grammar::CANONICAL_CHAIN,
-        "the grammar module's CANONICAL_CHAIN must equal the fixture's canonical chain"
+        dig_urn_protocol::CANONICAL_CHAIN,
+        "the canonical URN crate's CANONICAL_CHAIN must equal the fixture's canonical chain"
     );
+    // The no_std copy in core MUST NOT drift from the canonical URN owner.
+    assert_eq!(dig_capsule_core::CHAIN, dig_urn_protocol::CANONICAL_CHAIN);
 }
 
 #[test]

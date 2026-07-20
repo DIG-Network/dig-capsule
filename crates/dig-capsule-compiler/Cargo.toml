@@ -31,3 +31,6 @@ wat = "1"
 dig-capsule-host = { workspace = true }
 dig-capsule-prover = { workspace = true }
 dig-capsule-crypto = { workspace = true }
+# The self-serving / large-data-section integration tests derive retrieval keys
+# from canonical URNs via `DigUrn`.
+dig-urn-protocol = { workspace = true }

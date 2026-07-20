@@ -21,3 +21,5 @@ serde_json = "1"
 
 [dev-dependencies]
 tempfile = "3"
+# The KDF KAT test derives the retrieval key from the canonical URN via `DigUrn`.
+dig-urn-protocol = { workspace = true }

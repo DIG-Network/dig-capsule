@@ -30,6 +30,10 @@ path = "src/lib.rs"
 [dependencies]
 dig-capsule-core = { workspace = true }
 dig-capsule-chunker = { workspace = true }
+# The canonical URN scheme, re-exported from the facade's base `urn` module (the
+# hand-rolled core URN is gone). Light (sha2/hex/thiserror/serde), so it stays in
+# the always-on base surface.
+dig-urn-protocol = { workspace = true }
 # Optional members — each gated behind a feature so the base stays minimal while
 # the default (`full`) pulls the whole API (and CI `--workspace` covers it all).
 dig-capsule-crypto = { workspace = true, optional = true }
@@ -94,11 +98,18 @@ sha2 = "0.10"
 proptest = "1"
 hex = "0.4"
 
+# The canonical DIG URN scheme + retrieval-key derivation. dig-capsule CONSUMES
+# this crate (the hand-rolled `dig-capsule-core::urn` is gone) so the facade's
+# first URN surface is already canonical. std-only (thiserror/serde), so the
+# no_std/wasm library build of `dig-capsule-core` does NOT depend on it — only the
+# std consumers (store / stage / host) and the wasm-bindgen read-crypto do.
+dig-urn-protocol = "0.1"
+
 # Internal crates carry BOTH a path (used for in-workspace builds) AND a version
 # (used by `cargo publish` — crates.io forbids path-only deps). Members reference
 # these via `{ workspace = true }` so the version lives in exactly one place.
 # `dig-capsule-compiler` is pinned to 1.0.0 by SPEC §5 (see its Cargo.toml).
-dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.2.2" }
+dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.3.0" }
 dig-capsule-chunker = { path = "crates/dig-capsule-chunker", version = "0.2.2" }
 dig-capsule-crypto = { path = "crates/dig-capsule-crypto", version = "0.2.2" }
 dig-capsule-store = { path = "crates/dig-capsule-store", version = "0.2.2" }
@@ -106,7 +117,7 @@ dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.2" }
 dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.2" }
 dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.2" }
 dig-capsule-compiler = { path = "crates/dig-capsule-compiler", version = "1.0.0" }
-dig-capsule-stage = { path = "crates/dig-capsule-stage", version = "0.2.2" }
+dig-capsule-stage = { path = "crates/dig-capsule-stage", version = "0.3.0" }
 
 # Release hardening: keep integer-overflow checks ON in release builds. This code
 # parses untrusted serialized input and does offset/length arithmetic; silent

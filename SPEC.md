@@ -33,9 +33,15 @@ the normative contract below is unchanged and the golden fixtures read identical
   (`dig_capsule_core::Capsule::{canonical, from_canonical}`). A store is a sequence
   of capsules identified by `store_id`; each capsule is one on-chain-anchored root.
 - The content URN is `urn:dig:chia:<store_id>[/<resource_key>]` (root-independent)
-  or the display form `urn:dig:chia:<store_id>:<root>/<resource_key>`
-  (`dig_capsule_core::urn`). The `retrieval_key` is derived from the canonical URN and
-  is the stable per-resource lookup key; this derivation is FROZEN.
+  or the display form `urn:dig:chia:<store_id>:<root>/<resource_key>`. The canonical
+  `urn:dig:` scheme, its byte-level grammar, and the key derivation are OWNED by the
+  **`dig-urn-protocol`** crate (the single ecosystem source of truth); `dig-capsule`
+  CONSUMES it and re-exports `DigUrn` through the facade `urn` module. Two keys derive
+  from a URN, both FROZEN: `retrieval_key = SHA-256(canonical())` (the URN-identity key
+  that PINS the root, fixed by the frozen conformance corpus) and
+  `content_key = SHA-256(canonical_rootless())` (the root-INDEPENDENT per-resource
+  lookup + AES-seed key). The `.dig` format serializes NEITHER — a URN is never a
+  section field, so consuming the canonical crate changes no format byte.
 
 ## 2. The DIGS data section
 

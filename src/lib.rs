@@ -19,7 +19,7 @@
 //! | Module | Covers | Feature |
 //! |--------|--------|---------|
 //! | [`capsule`] | Capsule identity, the size ladder, visibility, generations | base |
-//! | [`urn`] | The `urn:dig:chia:…` scheme + retrieval-key derivation | base |
+//! | [`urn`] | The canonical `urn:dig:chia:…` scheme (`dig-urn-protocol`) + key derivation | base |
 //! | [`format`] | The DIGS data section, codec, wire types, ABI, hashing | base |
 //! | [`merkle`] | The ciphertext-leaf merkle tree + inclusion proofs | base |
 //! | [`chunk`] | Content-defined (FastCDC) chunking | base |
@@ -70,9 +70,9 @@
 //! let spec = CapsuleClass::DEFAULT.spec();
 //! assert_eq!(spec.content_cap_bytes, 128_000_000);
 //!
-//! // A resource URN derives a stable, root-independent retrieval key.
-//! let urn = Urn::parse("urn:dig:chia:0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-//! let _key: Bytes32 = urn.retrieval_key();
+//! // A resource URN derives a stable, root-independent content key.
+//! let urn = DigUrn::parse("urn:dig:chia:0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+//! let _key = urn.content_key();
 //! ```
 //!
 //! ## The full build path (default features)
@@ -106,14 +106,37 @@ pub mod capsule {
 
 /// The DIG content URN scheme and its frozen retrieval-key derivation.
 ///
-/// `urn:dig:chia:<store_id>[:<root>][/<resource_key>]` ([`Urn`]). The
-/// `retrieval_key` derived from the canonical (root-independent) URN is the stable
-/// per-resource lookup key — this derivation is FROZEN and shared byte-for-byte with
-/// the browser verifier.
+/// `urn:dig:chia:<store_id>[:<root>][/<resource_key>]` ([`DigUrn`]). The canonical
+/// scheme, grammar, and key derivation are owned by the `dig-urn-protocol` crate —
+/// the ONE ecosystem definition — and re-exported here so consumers reach them
+/// through the facade. Two keys are derived from a URN, both FROZEN and shared
+/// byte-for-byte with the browser verifier:
+///
+/// - [`DigUrn::retrieval_key`] = `SHA-256(canonical())` — the URN-identity key that
+///   PINS the root (what the frozen conformance corpus fixes);
+/// - [`DigUrn::content_key`] = `SHA-256(canonical_rootless())` — the root-INDEPENDENT
+///   key a resolver uses to fetch and to seed the AES key (stable across generations).
+///
+/// [`Bytes32`]: crate::format::Bytes32
 pub mod urn {
-    pub use dig_capsule_core::urn::Urn;
-    pub use dig_capsule_core::urn_grammar::{CANONICAL_CHAIN, URN_ABNF};
-    pub use dig_capsule_core::{CHAIN, DEFAULT_RESOURCE_KEY};
+    pub use dig_urn_protocol::{
+        Bytes32 as UrnBytes32, DigUrn, SecretSalt, UrnParseError, CANONICAL_CHAIN,
+        DEFAULT_RESOURCE_KEY, SALT_QUERY_MARKER, URN_ABNF, URN_PREFIX,
+    };
+
+    /// The [`Capsule`](crate::capsule::Capsule) a URN pins, if any — the equivalent of
+    /// the former `Urn::as_capsule`.
+    ///
+    /// Returns `Some` only when the URN carries a concrete `root_hash` (that
+    /// `(store_id, root_hash)` pair *is* a capsule / one immutable generation); a
+    /// rootless URN pins no generation and yields `None`. Pure naming view — it does
+    /// not touch `canonical()` / `retrieval_key`.
+    pub fn capsule_from_urn(urn: &DigUrn) -> Option<crate::capsule::Capsule> {
+        urn.root_hash.map(|root_hash| crate::capsule::Capsule {
+            store_id: crate::format::Bytes32(urn.store_id.0),
+            root_hash: crate::format::Bytes32(root_hash.0),
+        })
+    }
 }
 
 /// The DIGS on-disk/on-wire format: data section, codec, wire types, ABI, hashing.
@@ -252,7 +275,7 @@ pub mod prelude {
     pub use crate::format::{sha256, Bytes32, Bytes48, Bytes96};
     pub use crate::merkle::{MerkleProof, MerkleTree};
     pub use crate::metadata::MetadataManifest;
-    pub use crate::urn::Urn;
+    pub use crate::urn::DigUrn;
 
     #[cfg(feature = "store")]
     pub use crate::store::Store;

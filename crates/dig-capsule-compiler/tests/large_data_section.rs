@@ -22,7 +22,25 @@ use dig_capsule_compiler::{Compiler, CompilerConfig, GenerationView, ResourceVie
 use dig_capsule_core::config::HostImportsConfig;
 use dig_capsule_core::merkle::MerkleTree;
 use dig_capsule_core::serving::concat_output;
-use dig_capsule_core::{Bytes32, Bytes48, ChiaBlockRef, ContentResponse, Decode, Decoder, Urn};
+use dig_capsule_core::{Bytes32, Bytes48, ChiaBlockRef, ContentResponse, Decode, Decoder};
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
+
+/// The canonical root-INDEPENDENT resource URN (via the canonical `dig-urn-protocol`
+/// crate). `store_id` is a `dig_capsule_core::Bytes32` bridged to the URN byte type.
+fn rootless_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
+    DigUrn {
+        chain: "chia".to_string(),
+        store_id: UrnBytes32(store_id.0),
+        root_hash: None,
+        resource_key: Some(resource_key.to_string()),
+    }
+}
+
+/// The rootless retrieval key as a `dig_capsule_core::Bytes32`. Byte-identical to the
+/// former `Urn::retrieval_key()`.
+fn retrieval_key_of(urn: &DigUrn) -> Bytes32 {
+    Bytes32(urn.retrieval_key().0)
+}
 use dig_capsule_crypto::bls::BlsSecretKey;
 use dig_capsule_crypto::{derive_decryption_key, encrypt_chunk};
 use dig_capsule_host::{ExecutionLimits, FixedClock, HostDeps, HostRuntime};
@@ -143,14 +161,9 @@ fn serve_single_resource_and_verify(payload: Vec<u8>, tag: &str, uniform_blob_le
 
     // ---- One private store, one resource (index.html) carrying `payload`. ----
     let store_id = Bytes32([0x7Au8; 32]);
-    let urn = Urn {
-        chain: "chia".to_string(),
-        store_id,
-        root_hash: None,
-        resource_key: Some("index.html".to_string()),
-    };
+    let urn = rootless_urn(store_id, "index.html");
     let canonical = urn.canonical();
-    let retrieval_key = urn.retrieval_key();
+    let retrieval_key = retrieval_key_of(&urn);
 
     // Client-derivable AES key (public store: no salt). The module never holds it.
     let key = derive_decryption_key(&canonical, None);
@@ -259,16 +272,11 @@ fn compile_and_extract_root(uniform_blob_len: usize, tag: &str) -> (u64, Bytes32
     let guest = read_guest_wasm();
     let store_id = dig_capsule_core::sha256(&[0xCDu8; 48]); // SHA-256(pubkey) == store id
     let store_pubkey = Bytes48([0xCDu8; 48]);
-    let urn = Urn {
-        chain: "chia".to_string(),
-        store_id,
-        root_hash: None,
-        resource_key: Some("index.html".to_string()),
-    };
+    let urn = rootless_urn(store_id, "index.html");
     let key = derive_decryption_key(&urn.canonical(), None);
     let ciphertext = encrypt_chunk(&key, b"fixed content for the root-invariance check");
     let resource = FixtureResource {
-        retrieval_key: urn.retrieval_key(),
+        retrieval_key: retrieval_key_of(&urn),
         chunks: vec![(sha256(&ciphertext), ciphertext)],
     };
     let gens = vec![FixtureGen {

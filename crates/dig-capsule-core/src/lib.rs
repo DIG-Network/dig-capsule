@@ -17,8 +17,6 @@ pub mod manifest;
 pub mod merkle;
 pub mod public_manifest;
 pub mod tombstone;
-pub mod urn;
-pub mod urn_grammar;
 pub mod wire;
 
 pub use abi::{is_error, pack_ptr_len, unpack_ptr_len};
@@ -64,12 +62,14 @@ pub use manifest::{Author, MetadataManifest};
 pub use merkle::{resource_leaf, MerkleProof, MerkleTree, ProofStep};
 pub use public_manifest::{PublicManifest, PublicManifestEntry, PUBLIC_MANIFEST_SCHEMA_VERSION};
 pub use tombstone::{RevocationReason, Tombstone, TombstoneScope};
-pub use urn::Urn;
 
 /// The canonical chain tag for Digstore URNs (mainnet-only; paper §1/§10). The
 /// SINGLE definition shared by the producer (`digstore-cli`/`dig-capsule-store`), the
 /// host, and the browser verifier (`dig-capsule-wasm`) — the value every layer puts
-/// in `Urn.chain`, so the retrieval key derived from the URN can never skew.
+/// in a URN's chain segment, so the retrieval key derived from the URN can never
+/// skew. Kept as a no_std-available copy of `dig_urn_protocol::CANONICAL_CHAIN`
+/// (the canonical URN owner); the two MUST stay equal (asserted in the conformance
+/// test).
 pub const CHAIN: &str = "chia";
 
 /// Conventional default-view resource key when a URN carries no resource path

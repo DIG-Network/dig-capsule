@@ -24,8 +24,9 @@ dig-capsule = "0.3"                                   # the whole API (default =
 use dig_capsule::prelude::*;
 
 let spec = CapsuleClass::DEFAULT.spec();              // 128 MB, the canonical size
-let urn = Urn::parse("urn:dig:chia:00").unwrap();
-let key: Bytes32 = urn.retrieval_key();               // frozen retrieval-key derivation
+// The canonical URN (owned by `dig-urn-protocol`, re-exported through the facade):
+let urn = DigUrn::parse("urn:dig:chia:0000000000000000000000000000000000000000000000000000000000000000").unwrap();
+let key = urn.content_key();                          // frozen root-independent key derivation
 ```
 
 The concept modules: `capsule`, `urn`, `format`, `merkle`, `chunk`, `metadata` (base);
@@ -56,8 +57,9 @@ native `crypto` module here.
 ## Layout (implementation detail — depend on the facade, not these)
 
 - `crates/dig-capsule-core` — DIGS format/datasection, capsule identity, codec, sizes,
-  chunk-seal + KDF crypto, keytable, manifest, merkle, URN, wire, ABI (`no_std`/
-  wasm-clean).
+  chunk-seal + KDF crypto, keytable, manifest, merkle, wire, ABI (`no_std`/
+  wasm-clean). The `urn:dig:` scheme is NOT here — it is the canonical
+  `dig-urn-protocol` crate, re-exported through the facade `urn` module.
 - `crates/dig-capsule-chunker` — content chunking.
 - `crates/dig-capsule-crypto` — AEAD + chia-bls signing + serving-proof crypto (native).
 - `crates/dig-capsule-store` — chunkstore / generation / history / staging / diff.

@@ -33,9 +33,10 @@ use std::path::{Path, PathBuf};
 use dig_capsule_chunker::{chunk_slice, Chunk};
 use dig_capsule_core::{
     AuthenticationInfo, Bytes32, Bytes48, ChunkerConfig, MerkleTree, MetadataManifest, SecretSalt,
-    StoreConfig, TrustedHostKey, Urn, Visibility, CHAIN, MAX_STORE_BYTES,
+    StoreConfig, TrustedHostKey, Visibility, MAX_STORE_BYTES,
 };
 use dig_capsule_store::{ChunkRef, GenerationManifest, KeyTableRecord};
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn, CANONICAL_CHAIN};
 
 /// Errors the stage→compile engine can return. Stable variants so callers
 /// (the CLI, and dig-node's `dig.stage` RPC) can map them to catalogued error
@@ -80,10 +81,14 @@ pub fn chunker_config() -> ChunkerConfig {
 /// The canonical root-INDEPENDENT URN for a resource (used for both the
 /// retrieval key and the AES key, matching `dig-capsule-store`'s own convention).
 /// The client must reconstruct this same URN (root dropped) when decrypting.
-pub fn canonical_resource_urn(store_id: Bytes32, resource_key: &str) -> Urn {
-    Urn {
-        chain: CHAIN.to_string(),
-        store_id,
+///
+/// Returns the canonical [`DigUrn`] (from `dig-urn-protocol`); the `store_id` is
+/// taken as a `dig_capsule_core::Bytes32` for caller convenience and bridged to the
+/// URN crate's byte type internally.
+pub fn canonical_resource_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
+    DigUrn {
+        chain: CANONICAL_CHAIN.to_string(),
+        store_id: UrnBytes32(store_id.0),
         root_hash: None,
         resource_key: Some(resource_key.to_string()),
     }
@@ -353,7 +358,7 @@ pub fn finalize(
             let urn = canonical_resource_urn(store_id, rk);
             KeyTableRecord {
                 resource_key: rk.clone(),
-                static_key: urn.retrieval_key(),
+                static_key: Bytes32(urn.retrieval_key().0),
                 generation: root,
                 chunk_indices: indices.clone(),
                 total_size: *total,
