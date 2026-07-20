@@ -1,9 +1,9 @@
 # Runbook — dig-capsule (build, test, publish)
 
-The `.dig` capsule data plane: a Cargo workspace of 9 members plus the top
-**`dig-capsule` facade** (the root package — the curated public API consumers depend
-on), plus the `@dignetwork/dig-capsule-wasm` wasm npm package (built from
-`crates/dig-capsule-wasm`).
+The `.dig` capsule data plane: the single **`dig-capsule`** crate (the curated public
+API consumers depend on), whose browser + Node read-crypto is shipped as the
+`@dignetwork/dig-capsule-wasm` npm package (built from the crate's `wasm` feature;
+packaging harness in `wasm-npm/`).
 
 ## Prerequisites
 
@@ -45,12 +45,13 @@ instrumentation; it still runs in the plain `cargo test` job.)
 
 ## The wasm npm package (@dignetwork/dig-capsule-wasm)
 
-From `crates/dig-capsule-wasm` (excluded from the workspace — wasm32-only):
+From `wasm-npm/` (the packaging harness; builds the root crate's `wasm` feature):
 
-    npm run build:pkg        # wasm-pack web + node, assemble ./pkg
-    cargo run --example gen_smoke_fixture > smoke_fixture.json
+    npm run build:pkg        # wasm-pack web + node (--no-default-features --features wasm), assemble ./pkg
+    cargo run --manifest-path ../Cargo.toml --no-default-features --features crypto,wasm --example gen_smoke_fixture > smoke_fixture.json
     node scripts/verify-pkg.mjs               # Node end-to-end test
-    wasm-pack test --headless --chrome --test browser   # real-browser test
+    # real-browser test (run from the repo root):
+    wasm-pack test --headless --chrome .. --test browser -- --no-default-features --features wasm
 
 The assembled `pkg/` is dual-target (Node CommonJS + browser ESM) behind
 conditional exports, with one shared `dig_client_bg.wasm` and an SRI anchor.

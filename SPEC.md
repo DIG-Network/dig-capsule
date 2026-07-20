@@ -123,11 +123,13 @@ the normative contract below is unchanged and the golden fixtures read identical
 - The `ChainSource` trait (the serving proof's chain-read abstraction) and its live
   `CoinsetChainSource` implementation live in `dig-capsule-prover` — no chain-plane
   dependency.
-- `dig-capsule-core` is `no_std`/wasm-clean (no `blst`, no `getrandom`); the native
-  BLS crypto is isolated in `dig-capsule-crypto`. This split is load-bearing: it lets
-  the wasm read path compile to `wasm32-unknown-unknown`.
+- The base data plane is `no_std`/wasm-clean (no `blst`, no `getrandom`); the native
+  BLS crypto is isolated behind the `crypto` feature. This split is load-bearing: it
+  lets the `wasm` read path compile to `wasm32-unknown-unknown`.
 - **`@dignetwork/dig-capsule-wasm`** is the browser + Node read-crypto package, built
-  from `crates/dig-capsule-wasm` (depends on `dig-capsule-core` only). It ships BOTH
+  from the `dig-capsule` crate's **`wasm`** feature (a `std` build with no
+  chia-bls/wasmtime/blst, via `wasm-pack build --no-default-features --features wasm`).
+  It ships BOTH
   wasm-bindgen targets in ONE package behind conditional exports: `node` resolves
   to the CommonJS entry, `browser`/`import`/`default` to the ESM entry. The wasm
   binary is byte-identical across targets (one SRI anchor). The public surface

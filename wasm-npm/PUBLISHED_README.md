@@ -99,5 +99,5 @@ maintaining a private copy. The vendored fallbacks can be removed once switched.
 
 ## License
 
-GPL-2.0-only. Source: https://github.com/DIG-Network/digs (crate
-`crates/dig-capsule-wasm`).
+GPL-2.0-only. Source: https://github.com/DIG-Network/dig-capsule (the `dig-capsule`
+crate's `wasm` feature).

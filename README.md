@@ -67,8 +67,10 @@ native `crypto` module here.
   guest/host serve triad + §13 serving proofs (`ChainSource` + `CoinsetChainSource`).
 - `crates/dig-capsule-compiler` — files → self-serving capsule module.
 - `crates/dig-capsule-stage` — the stage → compile build pipeline.
-- `crates/dig-capsule-wasm` — the browser + Node read-crypto behind the
-  **`@dignetwork/dig-capsule-wasm`** npm package (excluded from the workspace; wasm32-only).
+- the **`wasm`** feature (`src/wasm_browser.rs`) — the browser + Node read-crypto
+  behind the **`@dignetwork/dig-capsule-wasm`** npm package, built with
+  `wasm-pack build --no-default-features --features wasm` (packaging harness in
+  `wasm-npm/`).
 
 ## Docs
 
