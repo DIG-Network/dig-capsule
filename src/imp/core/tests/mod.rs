@@ -1,0 +1,19 @@
+//! Migrated per-member tests, run as inline unit tests of the collapsed crate (#1270).
+mod abi;
+mod bytes;
+mod capsule;
+mod codec_primitives;
+mod codec_structs;
+mod config;
+mod conventions_paths;
+mod datasection;
+mod error;
+mod keytable;
+mod manifest;
+mod merkle;
+mod section_header;
+mod serving;
+mod tombstone;
+mod urn_conformance;
+mod wire_content;
+mod wire_proof;

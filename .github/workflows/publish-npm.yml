@@ -1,11 +1,13 @@
 name: publish-npm
 
 # Publish the capsule read-crypto WASM as @dignetwork/dig-capsule-wasm. Assembles a
-# DUAL-TARGET package (wasm-bindgen `web` ESM + `nodejs` CommonJS) via
-# crates/dig-capsule-wasm's build:pkg, so it imports cleanly in BOTH a browser
-# bundler (Vite/webpack) AND a Node.js service, then publishes the assembled
-# ./pkg. Auth uses npm OIDC trusted publishing (no NPM_TOKEN): the job's
-# id-token is exchanged for a short-lived publish credential by npm >= 11.5.1.
+# DUAL-TARGET package (wasm-bindgen `web` ESM + `nodejs` CommonJS) via the wasm-npm
+# harness's build:pkg — which builds the ROOT `dig-capsule` crate with
+# `--no-default-features --features wasm` (the `full` default pulls wasmtime/blst,
+# which do NOT compile to wasm32) — so it imports cleanly in BOTH a browser bundler
+# (Vite/webpack) AND a Node.js service, then publishes the assembled ./pkg. Auth uses
+# npm OIDC trusted publishing (no NPM_TOKEN): the job's id-token is exchanged for a
+# short-lived publish credential by npm >= 11.5.1.
 # Runs when a vX.Y.Z tag is pushed (release.yml) or on manual dispatch.
 on:
   push:
@@ -30,7 +32,7 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: crates/dig-capsule-wasm
+        working-directory: wasm-npm
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,7 +59,7 @@ jobs:
 
       - name: Verify the assembled package end-to-end
         run: |
-          cargo run --example gen_smoke_fixture > smoke_fixture.json
+          cargo run --manifest-path ../Cargo.toml --no-default-features --features crypto,wasm --example gen_smoke_fixture > smoke_fixture.json
           node scripts/verify-pkg.mjs
 
       # Trusted publishing: npm authenticates via the OIDC id-token — no NODE_AUTH_TOKEN.

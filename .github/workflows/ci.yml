@@ -73,8 +73,11 @@ jobs:
 
       # The stage/compiler engines embed the REAL guest wasm (BINDING contract
       # D6), so the wasm32 guest must be built before anything that compiles them.
-      - name: Build guest wasm (required by dig-capsule-stage build.rs)
-        run: cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
+      # The guest is the same crate compiled under the `guest-wasm` feature to
+      # wasm32 (emits target/wasm32-unknown-unknown/release/dig_capsule.wasm),
+      # which build.rs embeds into the native serve engine.
+      - name: Build guest wasm (required by build.rs guest embed)
+        run: cargo build --no-default-features --features guest-wasm --target wasm32-unknown-unknown --release
 
       - name: Format check
         if: matrix.os == 'ubuntu-latest'
@@ -82,22 +85,22 @@ jobs:
 
       - name: Clippy (deny warnings)
         run: >
-          cargo clippy --workspace --all-targets --
+          cargo clippy --all-targets --
           -D warnings
           -A clippy::default_constructed_unit_structs
           -A clippy::field_reassign_with_default
 
       - name: Build
-        run: cargo build --workspace
+        run: cargo build
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
       - name: Test (nextest, flaky-aware)
-        run: cargo nextest run --workspace --retries 2
+        run: cargo nextest run --retries 2
 
       - name: Doctests
-        run: cargo test --doc --workspace
+        run: cargo test --doc
 
   coverage:
     name: Coverage (>=80% lines, gated)
@@ -133,21 +136,90 @@ jobs:
         with:
           tool: cargo-llvm-cov,nextest
 
-      - name: Build guest wasm (required by dig-capsule-stage build.rs)
-        run: cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release
+      - name: Build guest wasm (required by build.rs guest embed)
+        run: cargo build --no-default-features --features guest-wasm --target wasm32-unknown-unknown --release
 
       # Gate the pure data-plane logic. The wasmtime host glue and the RISC0
       # backend are exercised by integration tests, not unit-counted here.
-      # Exclude `module_validates_and_exports_full_abi`: it shells out to a
-      # nested `cargo build --target wasm32` that inherits llvm-cov's coverage
-      # RUSTFLAGS and fails under instrumentation. It still gates in the `test`
-      # job (both OS); it measures build/ABI shape, not logic coverage.
+      # `--ignore-filename-regex` drops build.rs + the src/imp/guest/ ABI shim
+      # from the denominator. Exclude `module_validates_and_exports_full_abi`:
+      # it shells out to a nested `cargo build --target wasm32` that inherits
+      # llvm-cov's coverage RUSTFLAGS and fails under instrumentation. It still
+      # gates in the `test` job (both OS); it measures build/ABI shape, not logic.
       - name: Coverage (>=80% line gate)
         run: >
-          cargo llvm-cov nextest --workspace
+          cargo llvm-cov nextest
           --ignore-filename-regex '(build\.rs|guest/)'
           --fail-under-lines 80 --retries 2
-          -E 'not test(=module_validates_and_exports_full_abi)'
+          -E 'not test(module_validates_and_exports_full_abi)'
+
+  risc0:
+    name: risc0 (execution proofs)
+    runs-on: ubuntu-latest
+    env:
+      # Real code path (build env -> guest exec -> journal decode -> receipt
+      # verify) but the fast dev receipt, so the roundtrip + 3 FAIL cases run in
+      # seconds instead of minutes of real proving.
+      RISC0_DEV_MODE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          rustup show
+          rustc --version && cargo --version
+          rustup target add wasm32-unknown-unknown
+
+      # The RISC0 backend still builds under the crate's default features, which
+      # include `compile` -> build.rs embeds the wasm32 guest (BINDING contract
+      # D6), so build it before anything that compiles the serve engine.
+      - name: Free disk space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /usr/local/lib/android /opt/hostedtoolcache \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell \
+            /usr/local/lib/node_modules /usr/local/share/chromium \
+            /usr/local/graalvm "${AGENT_TOOLSDIRECTORY:-}" || true
+          sudo docker image prune --all --force || true
+
+      - name: Cache cargo + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ubuntu-risc0-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ubuntu-risc0-
+
+      # Install the RISC0 toolchain (rzup manages the guest rust toolchain +
+      # r0vm). The guest ELF is built by build.rs job (c) via risc0-build's
+      # embed_methods(), which needs this toolchain on PATH.
+      - name: Install RISC0 toolchain (rzup)
+        shell: bash
+        run: |
+          curl -L https://risczero.com/install | bash
+          echo "$HOME/.risc0/bin" >> "$GITHUB_PATH"
+          "$HOME/.risc0/bin/rzup" install rust 1.85.0
+          "$HOME/.risc0/bin/rzup" install r0vm 1.2.6
+          "$HOME/.risc0/bin/rzup" install cpp || true
+
+      - name: Build guest wasm (required by build.rs guest embed under default features)
+        run: cargo build --no-default-features --features guest-wasm --target wasm32-unknown-unknown --release
+
+      - name: Build (risc0 feature)
+        run: cargo build --features risc0
+
+      # Actually EXECUTE the real prove->verify roundtrip + the 3 FAIL cases (dev
+      # mode). These tests are un-ignored, so a plain test run runs them.
+      - name: Test (risc0 feature — real prove/verify roundtrip)
+        run: cargo test --features risc0 imp::prover::tests::risc0 -- --nocapture
 
   wasm-package:
     name: "@dignetwork/dig-capsule-wasm (dual-target wasm)"
@@ -168,37 +240,39 @@ jobs:
         with:
           node-version: 20
 
-      - name: Format check
-        working-directory: crates/dig-capsule-wasm
-        run: cargo fmt --check
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
 
-      - name: Clippy (deny warnings)
-        working-directory: crates/dig-capsule-wasm
-        run: cargo clippy --all-targets -- -D warnings
+      # The `wasm` read-crypto surface is the crate compiled with only the browser
+      # feature set to wasm32 — lint it exactly as it ships (no `full` defaults,
+      # which would pull wasmtime/blst that do not compile to wasm32).
+      - name: Clippy (wasm read-crypto surface, deny warnings)
+        run: cargo clippy --no-default-features --features wasm --target wasm32-unknown-unknown -- -D warnings
 
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      - name: Parity tests (native, vs dig-capsule-crypto; flaky-aware)
-        working-directory: crates/dig-capsule-wasm
-        run: cargo nextest run --retries 2
-
-      - name: Parity doctests
-        working-directory: crates/dig-capsule-wasm
-        run: cargo test --doc
+      # §7 byte-parity gate: the native parity + public-manifest tests prove the
+      # wasm read-crypto exports match the host crypto byte-for-byte.
+      - name: Parity tests (native, wasm surface; flaky-aware)
+        run: cargo nextest run --no-default-features --features crypto,wasm --retries 2
 
       - name: Build + assemble the dual-target package (web + node -> pkg/)
-        working-directory: crates/dig-capsule-wasm
+        working-directory: wasm-npm
         run: npm run build:pkg
 
       - name: Generate real-crypto smoke fixture
-        working-directory: crates/dig-capsule-wasm
-        run: cargo run --example gen_smoke_fixture > smoke_fixture.json
+        run: cargo run --manifest-path Cargo.toml --no-default-features --features crypto,wasm --example gen_smoke_fixture > wasm-npm/smoke_fixture.json
 
       - name: Node test — verify assembled package end-to-end
-        working-directory: crates/dig-capsule-wasm
+        working-directory: wasm-npm
         run: node scripts/verify-pkg.mjs
 
+      # The cargo build flags (`--no-default-features --features wasm --test
+      # browser`) MUST precede `--`: wasm-pack forwards pre-`--` args to the
+      # cargo build, while args AFTER `--` reach only the test binary. Placing
+      # them after `--` left cargo on the `full` default features, dragging
+      # wasmtime/reqwest into the wasm32 graph (they have no wasm32 backend) and
+      # failing the compile before any test ran.
       - name: Real-browser test (headless Chrome)
-        working-directory: crates/dig-capsule-wasm
-        run: wasm-pack test --headless --chrome --test browser
+        run: wasm-pack test --headless --chrome --no-default-features --features wasm --test browser

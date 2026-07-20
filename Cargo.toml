@@ -1,129 +1,251 @@
-# The top-level `dig-capsule` FACADE crate (epic #744 / #1247). This is the ONE
-# curated public entry point over the workspace's `dig-capsule-*` members: consumers
-# (dig-store, dig-node, dig-urn-resolver) depend on JUST `dig-capsule` and use its
-# facade — the member split is an implementation detail. Pure facade: re-exports +
-# thin organization only, NO `.dig` format logic and NO format-byte change.
-#
-# The root package version (0.3.0) is DELIBERATELY decoupled from the members
-# (0.2.2 / compiler 1.0.0): both `ensure-version-increment.yml` and `release.yml`
-# resolve "the version" from this file as `package.version OR
-# workspace.package.version`, so the facade releases as v0.3.0 while members stay
-# 0.2.2, with zero extra workflow surgery.
+# The ONE `dig-capsule` crate (#1270): the 9 former native `dig-capsule-*` member
+# crates + the self-serving guest + the RISC0 guest, collapsed into a single crate
+# with one curated public facade (`src/lib.rs`). Consumers (dig-store, dig-node,
+# dig-urn-resolver) depend on JUST `dig-capsule`; the internal split lives under the
+# `pub(crate) mod imp` tree and is an implementation detail. Only ONE crate publishes
+# to crates.io (kills the new-crate topological-publish 429). The `.dig` format bytes,
+# the guest ABI, and `COMPILER_VERSION` are UNCHANGED — a pure mechanical collapse.
 [package]
 name = "dig-capsule"
-version = "0.3.0"
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
-description = "The DIG Network .dig capsule data plane — one curated facade over the DIGS format, capsule read-crypto, compiler, staging, and the guest/host serve triad."
+version = "0.4.0"
+edition = "2021"
+license = "GPL-2.0-only"
+repository = "https://github.com/DIG-Network/dig-capsule"
+description = "The DIG Network .dig capsule data plane — one crate over the DIGS format, capsule read-crypto, compiler, staging, and the guest/host serve triad."
 readme = "README.md"
 keywords = ["dig", "chia", "content-addressed", "capsule", "storage"]
 categories = ["cryptography", "encoding", "data-structures"]
+# Explicit package file set — a complete, minimal build surface for crates.io. The
+# RISC0 guest ships as `guest-risc0/Cargo.toml.template` (+ src): cargo auto-EXCLUDES
+# any subdir that holds its own `Cargo.toml` (a nested package), even from `include`,
+# so the guest manifest is a `.template` that build.rs job (c) materializes to
+# `Cargo.toml` before `embed_methods()` — this keeps the guest sources in the tarball
+# so a `--features risc0` build from crates.io can resolve the methods.
+include = [
+    "src/**/*",
+    "build.rs",
+    "fixtures/**/*",
+    "tests/fixtures/**/*",
+    "guest-risc0/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "SPEC.md",
+]
 
 [lib]
 name = "dig_capsule"
 path = "src/lib.rs"
+# `rlib` for Rust consumers; `cdylib` so the `guest-wasm` feature can emit the
+# wasm32 self-serving guest module (the guest ABI `#[no_mangle]` exports).
+crate-type = ["rlib", "cdylib"]
 
-# --- The facade's two-tier dependency surface (see [features]). ---
-# The always-on light BASE (read / format / urn / merkle / chunk / metadata; NO
-# wasmtime, NO blst) so slim consumers (e.g. dig-urn-resolver) stay light.
-[dependencies]
-dig-capsule-core = { workspace = true }
-dig-capsule-chunker = { workspace = true }
-# The canonical URN scheme, re-exported from the facade's base `urn` module (the
-# hand-rolled core URN is gone). Light (sha2/hex/thiserror/serde), so it stays in
-# the always-on base surface.
-dig-urn-protocol = { workspace = true }
-# Optional members — each gated behind a feature so the base stays minimal while
-# the default (`full`) pulls the whole API (and CI `--workspace` covers it all).
-dig-capsule-crypto = { workspace = true, optional = true }
-dig-capsule-store = { workspace = true, optional = true }
-dig-capsule-compiler = { workspace = true, optional = true }
-dig-capsule-stage = { workspace = true, optional = true }
-dig-capsule-host = { workspace = true, optional = true }
-dig-capsule-prover = { workspace = true, optional = true }
-dig-capsule-guest = { workspace = true, optional = true }
+[[bin]]
+name = "dighost"
+path = "src/bin/dighost.rs"
+required-features = ["dighost"]
 
+# ---------------------------------------------------------------------------
+# Features — the same two-tier surface the facade documents.
+# ---------------------------------------------------------------------------
 [features]
-# Default = the WHOLE API, so `dig-capsule = "0.3"` and CI `cargo build --workspace`
-# build/clippy/test every gated module. A slim consumer opts out with
-# `default-features = false` (base only).
 default = ["full"]
 full = ["crypto", "store", "compile", "serve"]
-crypto = ["dep:dig-capsule-crypto"]
-store = ["dep:dig-capsule-store"]
-# The files->capsule build pipeline needs the compiler + staging, and staging seals
-# chunks (crypto) from the local store model (store).
-compile = ["dep:dig-capsule-compiler", "dep:dig-capsule-stage", "store", "crypto"]
-# The blind serve triad (guest logic + host runtime + serving proofs), which signs
-# with the native BLS crypto.
-serve = ["dep:dig-capsule-host", "dep:dig-capsule-prover", "dep:dig-capsule-guest", "crypto"]
-# OFF by default — the real RISC0 serving-proof circuit needs the RISC0 toolchain.
-# Passthrough only: flips the members' own `risc0` features.
-risc0 = ["serve", "dig-capsule-host/risc0", "dig-capsule-prover/risc0"]
 
-[workspace]
-resolver = "2"
-# The `.dig` store DATA PLANE, lifted from dig-store (epic #744 Phase 1): the DIGS
-# format, the compiler (files -> capsule), the capsule read-crypto, staging, and the
-# guest/host serve triad. Member crates are named `dig-capsule-*` (Option B naming,
-# #1247); each is published to crates.io in topological order (see release.yml). The
-# top `dig-capsule` facade above is the ROOT package (implicitly a member too).
-members = [
-  "crates/dig-capsule-core",
-  "crates/dig-capsule-chunker",
-  "crates/dig-capsule-crypto",
-  "crates/dig-capsule-store",
-  "crates/dig-capsule-guest",
-  "crates/dig-capsule-prover",
-  "crates/dig-capsule-host",
-  "crates/dig-capsule-compiler",
-  "crates/dig-capsule-stage",
+# `std` lifts the crate out of no_std and enables the canonical URN scheme
+# (`dig-urn-protocol` is a std crate) + `chunk::chunk_stream`. Every non-base
+# feature implies it.
+std = [
+  "serde",
+  "serde/std",
+  "dep:dig-urn-protocol",
+  "sha2/std",
+  "hex/std",
+  "serde_json/std",
 ]
-# `dig-capsule-prover/guest` is the RISC0 zkVM guest (built only under the `risc0`
-# feature with the RISC0 toolchain). `dig-capsule-wasm` is the browser read-crypto
-# behind `@dignetwork/dig-capsule-wasm`: it is wasm32-only and resolved independently with
-# its own Cargo.lock (its `dig-capsule-crypto` -> `chia-bls` -> `blst` C/asm does not
-# compile to wasm32), so it is EXCLUDED from the native workspace build.
-exclude = ["crates/dig-capsule-prover/guest", "crates/dig-capsule-wasm"]
+serde = ["dep:serde"]
 
-[workspace.package]
-edition = "2021"
-version = "0.2.2"
-license = "GPL-2.0-only"
-repository = "https://github.com/DIG-Network/dig-capsule"
+crypto = ["std", "dep:chia-bls", "dep:thiserror"]
+store = ["std", "crypto", "dep:toml", "dep:thiserror"]
+compile = [
+  "store",
+  "crypto",
+  "dep:wasm-encoder",
+  "dep:wasmparser",
+  "dep:chacha20",
+  "dep:wat",
+]
+serve = [
+  "crypto",
+  "dep:wasmtime",
+  "dep:reqwest",
+  "dep:rand",
+  "dep:rand_chacha",
+  "dep:thiserror",
+  # the guest half of the serve triad (compiled as a native rlib here)
+  "dep:bls12_381",
+  "dep:rsa",
+  "dep:p256",
+  "dep:sha2_v09",
+  "dep:chacha20",
+  "dep:base64",
+]
 
-[workspace.dependencies]
-sha2 = "0.10"
+# The real RISC0 serving-proof circuit; OFF by default (needs the RISC0 toolchain).
+risc0 = ["serve", "dep:risc0-zkvm", "dep:bincode", "dep:risc0-build"]
+# TEE-alternative hardware attestation hook (prover residual).
+hardware-attest = []
+
+# The wasm32, no_std self-serving guest cdylib (exports the guest ABI). Pulls only
+# the guest crypto deps — NO std, NO chia-bls, NO wasmtime.
+guest-wasm = [
+  "dep:bls12_381",
+  "dep:rsa",
+  "dep:p256",
+  "dep:sha2_v09",
+  "dep:chacha20",
+  "dep:base64",
+]
+
+# The browser + Node read-crypto surface (the `@dignetwork/dig-capsule-wasm` npm
+# package): the wasm-bindgen exports installed on `globalThis.digClient`. A `std`
+# build with NO chia-bls / wasmtime / blst — the read path needs neither BLS nor
+# randomness, only the pure `imp::core` KDF/AEAD/merkle/URN. Build it with
+# `wasm-pack build --no-default-features --features wasm` (the `full` default pulls
+# wasmtime/blst, which do NOT compile to wasm32-unknown-unknown).
+wasm = ["std", "dep:wasm-bindgen", "dep:js-sys", "dep:base64"]
+
+# The optional `dighost` reference binary (clap/tokio/object_store CLI). Not default,
+# so a plain consumer never pulls the CLI/async deps.
+dighost = [
+  "serve",
+  "dep:clap",
+  "dep:tokio",
+  "dep:object_store",
+  "dep:anyhow",
+  "dep:url",
+  "dep:futures",
+]
+
+# ---------------------------------------------------------------------------
+# Dependencies. Everything above the no_std+alloc base is OPTIONAL and gated.
+# ---------------------------------------------------------------------------
+[dependencies]
+# --- Always-on no_std + alloc base (former core + chunker). ---
+sha2 = { version = "0.10", default-features = false }
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+serde_json = { version = "1", default-features = false, features = ["alloc"] }
+# The AES-256-GCM-SIV chunk seal + HKDF derivation (base read-crypto primitives,
+# wasm/no_std-clean: `aes-gcm-siv` defaults OFF so it never drags in getrandom).
+aes-gcm-siv = { version = "0.11", default-features = false, features = ["aes", "alloc"] }
+hkdf = { version = "0.12", default-features = false }
+
+# --- Optional (std / crypto / store / compile / serve / guest-wasm). ---
+serde = { version = "1", default-features = false, features = ["derive", "alloc"], optional = true }
+# The canonical DIG URN scheme (std-only). Enabled by `std`.
+dig-urn-protocol = { version = "0.1", optional = true }
+
+# crypto
+chia-bls = { version = "=0.45.0", optional = true }
+thiserror = { version = "1", optional = true }
+
+# store
+toml = { version = "0.8", optional = true }
+
+# compile
+wasm-encoder = { version = "0.221", features = ["wasmparser"], optional = true }
+wasmparser = { version = "0.221", optional = true }
+chacha20 = { version = "0.9", optional = true }
+
+# serve (host + prover + native guest rlib)
+wasmtime = { version = "45", default-features = false, features = ["std", "cranelift", "runtime", "gc", "gc-drc", "gc-null", "threads", "pooling-allocator", "parallel-compilation"], optional = true }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"], optional = true }
+rand = { version = "0.8", optional = true }
+rand_chacha = { version = "0.3", optional = true }
+
+# guest crypto (native rlib under `serve`; wasm32 cdylib under `guest-wasm`)
+bls12_381 = { version = "0.8", default-features = false, features = ["alloc", "pairings", "groups", "experimental"], optional = true }
+rsa = { version = "0.9", default-features = false, features = ["sha2"], optional = true }
+p256 = { version = "0.13", default-features = false, features = ["ecdsa"], optional = true }
+# bls12_381 0.8's experimental hash-to-curve is bound to the digest 0.9 trait family,
+# so the AugScheme hash-to-G2 expand step uses a sha2 0.9 hasher (aliased); every
+# other hash uses sha2 0.10.
+sha2_v09 = { package = "sha2", version = "0.9", default-features = false, optional = true }
+base64 = { version = "0.22", default-features = false, features = ["alloc"], optional = true }
+
+# wasm read-crypto surface (feature = "wasm"): the wasm-bindgen exports + the
+# `js-sys` reflection that installs `globalThis.digClient`.
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+# risc0 (real ZK backend)
+risc0-zkvm = { version = "1.2", optional = true }
+bincode = { version = "1", optional = true }
+
+# dighost binary-only deps
+clap = { version = "4", features = ["derive"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+object_store = { version = "0.11", features = ["aws"], optional = true }
+anyhow = { version = "1", optional = true }
+url = { version = "2", optional = true }
+futures = { version = "0.3", optional = true }
+
+[build-dependencies]
+# compiler wat-template assembly (build job a), gated by `compile`.
+wat = { version = "1", optional = true }
+# risc0 guest ELF embedding (build job c), gated by `risc0`.
+risc0-build = { version = "1.2", optional = true }
+
+# Native-only dev-deps. These (tokio/httpmock → mio, object_store, proptest, …) do
+# NOT compile to wasm32-unknown-unknown, so they are target-gated OUT of the wasm
+# build. Without this gate, `wasm-pack test --test browser` drags mio into the
+# wasm32 graph and fails to compile. The native `test`/`coverage` jobs still get
+# them (parity.rs, public_manifest.rs, and the store/host suites use them).
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tempfile = "3"
 proptest = "1"
-hex = "0.4"
+httpmock = "0.7"
+wat = "1"
+rand_core = "0.6"
+object_store = { version = "0.11", features = ["aws"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+futures = "0.3"
 
-# The canonical DIG URN scheme + retrieval-key derivation. dig-capsule CONSUMES
-# this crate (the hand-rolled `dig-capsule-core::urn` is gone) so the facade's
-# first URN surface is already canonical. std-only (thiserror/serde), so the
-# no_std/wasm library build of `dig-capsule-core` does NOT depend on it — only the
-# std consumers (store / stage / host) and the wasm-bindgen read-crypto do.
-dig-urn-protocol = "0.1"
+# The headless-browser test for the `wasm` read-crypto surface (tests/browser.rs)
+# is the ONLY dev-dep that compiles to wasm32.
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+# getrandom 0.2 is pulled into the wasm32 TEST graph (via rand_core, transitively
+# under wasm-pack's test build) and refuses to compile for wasm*-unknown-unknown
+# without a backend. Enable its `js` backend for the browser test ONLY. This is a
+# dev-dependency: it never affects the shipped guest-wasm or crypto bytes (§5.1).
+getrandom = { version = "0.2", features = ["js"] }
 
-# Internal crates carry BOTH a path (used for in-workspace builds) AND a version
-# (used by `cargo publish` — crates.io forbids path-only deps). Members reference
-# these via `{ workspace = true }` so the version lives in exactly one place.
-# `dig-capsule-compiler` is pinned to 1.0.0 by SPEC §5 (see its Cargo.toml).
-dig-capsule-core = { path = "crates/dig-capsule-core", version = "0.3.0" }
-dig-capsule-chunker = { path = "crates/dig-capsule-chunker", version = "0.2.2" }
-dig-capsule-crypto = { path = "crates/dig-capsule-crypto", version = "0.2.2" }
-dig-capsule-store = { path = "crates/dig-capsule-store", version = "0.2.2" }
-dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.2" }
-dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.2" }
-dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.2" }
-dig-capsule-compiler = { path = "crates/dig-capsule-compiler", version = "1.0.0" }
-dig-capsule-stage = { path = "crates/dig-capsule-stage", version = "0.3.0" }
+# The npm smoke fixture generator (examples/gen_smoke_fixture.rs). Needs the native
+# `crypto` path (present under the default `full` features).
+[[example]]
+name = "gen_smoke_fixture"
+required-features = ["crypto"]
+
+# The RISC0 serving guest (built only under `risc0`, with the RISC0 toolchain). NOT a
+# `[dependencies]` path entry (that would make crates.io reject the crate); referenced
+# ONLY here + assembled by build.rs job (c) via `risc0_build::embed_methods()`.
+[package.metadata.risc0]
+methods = ["guest-risc0"]
 
 # Release hardening: keep integer-overflow checks ON in release builds. This code
 # parses untrusted serialized input and does offset/length arithmetic; silent
 # wrapping in release would turn a length-overflow bug into a memory-safety / logic
-# hazard. Cost is negligible for this workload. (Carried over from dig-store.)
+# hazard. (Carried over from dig-store.)
 [profile.release]
 overflow-checks = true
 debug-assertions = false
 panic = "unwind"
+
+# wasm-pack size optimization for the `wasm` read-crypto build. The single native
+# `[profile.release]` stays as-is (native hardening; `panic = "unwind"` is fine on
+# wasm32 — wasm-bindgen supports it and wasm-opt handles the size); the read-crypto
+# bundle is shrunk here at the wasm-opt stage instead of by flipping native panic.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-Os']

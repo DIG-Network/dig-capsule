@@ -1,0 +1,81 @@
+pub mod abi;
+pub mod bytes;
+pub mod capsule;
+pub mod capsule_class;
+pub mod codec;
+pub mod config;
+pub mod crypto;
+pub mod datasection;
+pub mod error;
+pub mod hash;
+pub mod keytable;
+pub mod manifest;
+pub mod merkle;
+pub mod public_manifest;
+pub mod tombstone;
+pub mod wire;
+
+pub use abi::{is_error, pack_ptr_len, unpack_ptr_len};
+pub use bytes::{Bytes32, Bytes48, Bytes96};
+pub use capsule::Capsule;
+pub use capsule_class::{CapsuleClass, CapsuleSpec};
+pub use codec::{Decode, DecodeError, Decoder, Encode, Encoder};
+pub use crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk, CHIA_BLS_SCHEME};
+pub use error::{CoreError, ErrorCode};
+pub use hash::sha256;
+
+/// Alias module so `crate::imp::core::types::Bytes32` resolves (host/guest use this path).
+pub mod types {
+    pub use crate::imp::core::bytes::{Bytes32, Bytes48, Bytes96};
+}
+
+/// CONVENTIONS C9: single source of truth for the serving-output byte ordering.
+/// Both `dig-capsule-guest` (`get_content`) and `dig-capsule-prover`
+/// (`ServingInputs::output_bytes`) call this so re-execution matches what was
+/// served (deviation #3, `program_hash` binding).
+pub mod serving {
+    use alloc::vec::Vec;
+
+    /// Concatenate chunk byte-slices in the given order (simple ordered concat).
+    pub fn concat_output(chunks_in_order: &[&[u8]]) -> Vec<u8> {
+        let total: usize = chunks_in_order.iter().map(|c| c.len()).sum();
+        let mut out = Vec::with_capacity(total);
+        for chunk in chunks_in_order {
+            out.extend_from_slice(chunk);
+        }
+        out
+    }
+}
+
+#[cfg(feature = "std")]
+pub use config::CompilationResult;
+pub use config::{
+    ChunkerConfig, CompilationStats, CompilerError, Generation, GenerationId, GenerationState,
+    HostImportsConfig, SecretSalt, StoreConfig, TrustedHostKey, Visibility, MAX_STORE_BYTES,
+};
+pub use keytable::{KeyTableEntry, PathWalk};
+pub use manifest::{Author, MetadataManifest};
+pub use merkle::{resource_leaf, MerkleProof, MerkleTree, ProofStep};
+pub use public_manifest::{PublicManifest, PublicManifestEntry, PUBLIC_MANIFEST_SCHEMA_VERSION};
+pub use tombstone::{RevocationReason, Tombstone, TombstoneScope};
+
+/// The canonical chain tag for Digstore URNs (mainnet-only; paper §1/§10). The
+/// SINGLE definition shared by the producer (`digstore-cli`/`dig-capsule-store`), the
+/// host, and the browser verifier (`dig-capsule-wasm`) — the value every layer puts
+/// in a URN's chain segment, so the retrieval key derived from the URN can never
+/// skew. Kept as a no_std-available copy of `dig_urn_protocol::CANONICAL_CHAIN`
+/// (the canonical URN owner); the two MUST stay equal (asserted in the conformance
+/// test).
+pub const CHAIN: &str = "chia";
+
+/// Conventional default-view resource key when a URN carries no resource path
+/// (paper §8.5 social conventions): the landing page a bare store URL resolves to.
+/// Shared by the CLI producer and the browser verifier.
+pub const DEFAULT_RESOURCE_KEY: &str = "index.html";
+pub use wire::{
+    AttestationChallenge, AttestationResponse, AuthenticationInfo, ChiaBlockRef, ContentResponse,
+    ExecutionProof, ProofPrelude, ProofResponse, ATTEST_DST,
+};
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests;

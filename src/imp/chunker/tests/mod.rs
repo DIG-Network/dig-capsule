@@ -1,0 +1,3 @@
+//! Migrated per-member tests, run as inline unit tests of the collapsed crate (#1270).
+mod properties;
+mod vectors;
