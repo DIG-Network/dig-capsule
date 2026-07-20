@@ -153,6 +153,74 @@ jobs:
           --fail-under-lines 80 --retries 2
           -E 'not test(module_validates_and_exports_full_abi)'
 
+  risc0:
+    name: risc0 (execution proofs)
+    runs-on: ubuntu-latest
+    env:
+      # Real code path (build env -> guest exec -> journal decode -> receipt
+      # verify) but the fast dev receipt, so the roundtrip + 3 FAIL cases run in
+      # seconds instead of minutes of real proving.
+      RISC0_DEV_MODE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        shell: bash
+        run: |
+          rustup show
+          rustc --version && cargo --version
+          rustup target add wasm32-unknown-unknown
+
+      # The RISC0 backend still builds under the crate's default features, which
+      # include `compile` -> build.rs embeds the wasm32 guest (BINDING contract
+      # D6), so build it before anything that compiles the serve engine.
+      - name: Free disk space
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /usr/local/lib/android /opt/hostedtoolcache \
+            /usr/local/share/boost /usr/share/swift /usr/local/share/powershell \
+            /usr/local/lib/node_modules /usr/local/share/chromium \
+            /usr/local/graalvm "${AGENT_TOOLSDIRECTORY:-}" || true
+          sudo docker image prune --all --force || true
+
+      - name: Cache cargo + target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ubuntu-risc0-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ubuntu-risc0-
+
+      # Install the RISC0 toolchain (rzup manages the guest rust toolchain +
+      # r0vm). The guest ELF is built by build.rs job (c) via risc0-build's
+      # embed_methods(), which needs this toolchain on PATH.
+      - name: Install RISC0 toolchain (rzup)
+        shell: bash
+        run: |
+          curl -L https://risczero.com/install | bash
+          echo "$HOME/.risc0/bin" >> "$GITHUB_PATH"
+          "$HOME/.risc0/bin/rzup" install rust 1.85.0
+          "$HOME/.risc0/bin/rzup" install r0vm 1.2.6
+          "$HOME/.risc0/bin/rzup" install cpp || true
+
+      - name: Build guest wasm (required by build.rs guest embed under default features)
+        run: cargo build --no-default-features --features guest-wasm --target wasm32-unknown-unknown --release
+
+      - name: Build (risc0 feature)
+        run: cargo build --features risc0
+
+      # Actually EXECUTE the real prove->verify roundtrip + the 3 FAIL cases (dev
+      # mode). These tests are un-ignored, so a plain test run runs them.
+      - name: Test (risc0 feature — real prove/verify roundtrip)
+        run: cargo test --features risc0 imp::prover::tests::risc0 -- --nocapture
+
   wasm-package:
     name: "@dignetwork/dig-capsule-wasm (dual-target wasm)"
     runs-on: ubuntu-latest
