@@ -216,6 +216,11 @@ futures = "0.3"
 # is the ONLY dev-dep that compiles to wasm32.
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3"
+# getrandom 0.2 is pulled into the wasm32 TEST graph (via rand_core, transitively
+# under wasm-pack's test build) and refuses to compile for wasm*-unknown-unknown
+# without a backend. Enable its `js` backend for the browser test ONLY. This is a
+# dev-dependency: it never affects the shipped guest-wasm or crypto bytes (§5.1).
+getrandom = { version = "0.2", features = ["js"] }
 
 # The npm smoke fixture generator (examples/gen_smoke_fixture.rs). Needs the native
 # `crypto` path (present under the default `full` features).
