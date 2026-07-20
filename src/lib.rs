@@ -223,6 +223,22 @@ pub mod metadata {
     };
 }
 
+/// The lightweight, wasmtime-free capsule reader.
+///
+/// [`Capsule::from_module_bytes`](crate::capsule::Capsule::from_module_bytes)
+/// recovers the canonical `(store_id, root_hash)` from compiled `.dig` module
+/// bytes using ONLY `wasmparser` + the no_std core — no wasmtime, no chia-bls,
+/// no store. FAIL-CLOSED: it recomputes the merkle root from the embedded
+/// `MerkleNodes` and rejects a forged `CurrentRoot` ([`ModuleReadError::RootMismatch`]).
+///
+/// SECURITY: `store_id` is the on-chain launcher id and is NOT self-verifiable
+/// from module bytes — the caller MUST cross-check it against a trusted anchor
+/// (URN / on-chain singleton / verified `ChainState`).
+#[cfg(feature = "reader")]
+pub mod reader {
+    pub use crate::imp::reader::ModuleReadError;
+}
+
 // ---------------------------------------------------------------------------
 // Feature-gated concept modules.
 // ---------------------------------------------------------------------------

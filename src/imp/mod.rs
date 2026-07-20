@@ -19,6 +19,14 @@
 pub(crate) mod chunker;
 pub(crate) mod core;
 
+// The wasmparser-only DIGS-blob extraction (shared by `reader` + `compile`) and
+// the lightweight, wasmtime-free capsule reader. `compile` implies `reader`, so
+// the extraction path is shared, never duplicated.
+#[cfg(feature = "reader")]
+pub(crate) mod extract;
+#[cfg(feature = "reader")]
+pub(crate) mod reader;
+
 // Native capsule crypto (AEAD + Chia-BLS). Base facade module `crypto` gates on this.
 #[cfg(feature = "crypto")]
 pub(crate) mod crypto;

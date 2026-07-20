@@ -27,7 +27,10 @@ implementation detail — consumers use only the top-level concept modules
 `default = full` (`crypto`+`store`+`compile`+`serve`); `std` lifts the crate out of
 `no_std` and enables the canonical `urn` scheme + `chunk::chunk_stream` (both require
 `std`); `wasm` is the browser/Node read-crypto surface; `guest-wasm` compiles the
-self-serving guest cdylib to wasm32; `risc0` builds the real serving-proof circuit.
+self-serving guest cdylib to wasm32; `risc0` builds the real serving-proof circuit;
+`reader` is the lightweight, wasmtime-free capsule reader (§1.1) — it pulls ONLY
+`wasmparser` above the `no_std` core (NO wasmtime/chia-bls/store), and `compile`
+implies it so the DIGS-blob extraction path is shared, never duplicated.
 The base (no default features) is a `no_std`+`alloc` core with NO `blst`/`getrandom`.
 The collapse changes no bytes — the normative contract below and the golden fixtures
 read identically. `COMPILER_VERSION` is the literal `1.0.0`, DECOUPLED from the crate

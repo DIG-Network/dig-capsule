@@ -1,7 +1,8 @@
 use wasm_encoder::{ConstExpr, DataSection, MemorySection, MemoryType, RawSection};
-use wasmparser::{DataKind, Operator, Parser, Payload};
+use wasmparser::{DataKind, Parser, Payload};
 
 use crate::imp::compiler::error::{CompilerError, Result};
+use crate::imp::extract::const_i32_offset;
 
 const WASM_PAGE: u64 = 65536;
 
@@ -41,7 +42,11 @@ pub fn inject_data_section(template: &[u8], blob: &[u8], mem_offset: u32) -> Res
                             memory_index,
                             offset_expr,
                         } => {
-                            let off = const_i32_offset(&offset_expr)?;
+                            let off = const_i32_offset(&offset_expr).ok_or_else(|| {
+                                CompilerError::InvalidTemplate(
+                                    "unsupported active data-segment offset expression".into(),
+                                )
+                            })?;
                             data.active(
                                 memory_index,
                                 &ConstExpr::i32_const(off),
@@ -178,46 +183,20 @@ pub fn inject_data_section(template: &[u8], blob: &[u8], mem_offset: u32) -> Res
 /// original generation inputs.
 pub fn extract_data_section(module: &[u8], mem_offset: u32) -> Result<Vec<u8>> {
     use crate::imp::core::datasection::DataView;
+    use crate::imp::extract::{extract_digs_segment, ExtractError};
 
-    let mut found: Option<Vec<u8>> = None;
-    for payload in Parser::new(0).parse_all(module) {
-        let payload = payload.map_err(|e| CompilerError::InvalidTemplate(e.to_string()))?;
-        if let Payload::DataSection(reader) = payload {
-            for seg in reader {
-                let seg = seg.map_err(|e| CompilerError::InvalidTemplate(e.to_string()))?;
-                if let DataKind::Active { offset_expr, .. } = seg.kind {
-                    let off = const_i32_offset(&offset_expr)?;
-                    if off as u32 == mem_offset && seg.data.len() >= 4 && &seg.data[..4] == b"DIGS"
-                    {
-                        // Last matching segment wins (instantiation order).
-                        found = Some(seg.data.to_vec());
-                    }
-                }
-            }
+    // Shared wasmparser-only extraction (also used by the lightweight `reader`
+    // path); re-wrap its coarse error into the compiler's error type.
+    let raw = extract_digs_segment(module, mem_offset).map_err(|e| match e {
+        ExtractError::BadWasm => CompilerError::InvalidTemplate("invalid wasm module".into()),
+        ExtractError::NoDataSection => {
+            CompilerError::InvalidTemplate("no DIGS data segment at expected offset".into())
         }
-    }
-    let raw = found.ok_or_else(|| {
-        CompilerError::InvalidTemplate("no DIGS data segment at expected offset".into())
     })?;
     // Trim to the self-describing total length so re-encoding is exact.
     let view = DataView::parse(&raw)
         .map_err(|e| CompilerError::InvalidTemplate(format!("bad DIGS blob: {e:?}")))?;
     Ok(raw[..view.total_len()].to_vec())
-}
-
-/// Read a `i32.const N` (the only offset form Rust/LLVM emits for active wasm32
-/// data segments) from an offset const-expression.
-fn const_i32_offset(offset_expr: &wasmparser::ConstExpr) -> Result<i32> {
-    let mut ops = offset_expr.get_operators_reader();
-    let op = ops
-        .read()
-        .map_err(|e| CompilerError::InvalidTemplate(e.to_string()))?;
-    match op {
-        Operator::I32Const { value } => Ok(value),
-        other => Err(CompilerError::InvalidTemplate(format!(
-            "unsupported active data-segment offset expression: {other:?}"
-        ))),
-    }
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
