@@ -15,7 +15,11 @@ fn cfg() -> HostImportsConfig {
 
 #[test]
 fn timeout_terminates_runaway_export() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/spin.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/spin.wat"
+    )))
+    .unwrap();
     let limits = ExecutionLimits {
         timeout: Duration::from_millis(300),
         fuel: u64::MAX, // isolate: prove TIMEOUT triggers, not fuel
@@ -39,7 +43,11 @@ fn timeout_terminates_runaway_export() {
 
 #[test]
 fn fuel_exhaustion_terminates_export() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/spin.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/spin.wat"
+    )))
+    .unwrap();
     let limits = ExecutionLimits {
         timeout: Duration::from_secs(30), // isolate: prove FUEL triggers, not timeout
         fuel: 1_000_000,
@@ -61,7 +69,11 @@ fn fuel_exhaustion_terminates_export() {
 
 #[test]
 fn memory_ceiling_blocks_oversized_grow() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/grow.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/grow.wat"
+    )))
+    .unwrap();
     let limits = ExecutionLimits {
         memory_bytes_max: 64 * 64 * 1024, // 64 pages = 4 MiB
         ..Default::default()
@@ -82,7 +94,11 @@ fn memory_ceiling_blocks_oversized_grow() {
 
 #[test]
 fn memory_ceiling_allows_within_limit() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/grow.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/grow.wat"
+    )))
+    .unwrap();
     let limits = ExecutionLimits::default(); // 6144 pages, room for +200
     let mut rt = HostRuntime::new(
         &module_bytes,

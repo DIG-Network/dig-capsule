@@ -23,11 +23,11 @@ fn emitted_proof_verifies_against_core() {
     );
 }
 
+use super::mock_host::MockHost;
 use crate::imp::core::{ContentResponse, KeyTableEntry};
 use crate::imp::guest::content::{serve_content, ContentOutcome, GateConfig};
 use crate::imp::guest::datasection::{encode_key_table, DataSection, SectionId};
 use crate::imp::guest::request::{ContentRequest, ValidityWindow};
-use super::mock_host::MockHost;
 
 fn gate_config() -> GateConfig {
     GateConfig {

@@ -1,5 +1,5 @@
-use crate::imp::store::error::{Result, StoreError};
 use crate::imp::core::{Bytes32, SecretSalt, StoreConfig, Visibility};
+use crate::imp::store::error::{Result, StoreError};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 

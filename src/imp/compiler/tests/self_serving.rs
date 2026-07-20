@@ -13,7 +13,6 @@
 //! This is the test that proves the compiler↔guest data-section drift is fixed:
 //! the module is genuinely self-serving and its merkle proof genuinely verifies.
 
-
 use crate::imp::compiler::{Compiler, CompilerConfig, GenerationView, ResourceView};
 use crate::imp::core::config::HostImportsConfig;
 use crate::imp::core::merkle::MerkleTree;
@@ -43,11 +42,6 @@ use crate::imp::host::{ExecutionLimits, FixedClock, HostDeps, HostRuntime};
 use crate::imp::prover::{MockChainSource, MockProver};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
-
-const GUEST_WASM: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../target/wasm32-unknown-unknown/release/dig_capsule_guest.wasm"
-);
 
 fn sha256(b: &[u8]) -> Bytes32 {
     let mut h = Sha256::new();
@@ -144,13 +138,7 @@ fn content_request(retrieval_key: Bytes32) -> Vec<u8> {
 
 #[test]
 fn real_compiled_module_serves_itself_with_verifying_proof() {
-    let guest = match Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec()) {
-        Ok(b) => b,
-        Err(e) => panic!(
-            "guest wasm missing at {GUEST_WASM}: {e}. Build it first: \
-             cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release"
-        ),
-    };
+    let guest = crate::imp::stage::embedded_guest_wasm().to_vec();
 
     // ---- Build a tiny fixture: one private store, one resource (index.html) ----
     let store_id = Bytes32([0x7Au8; 32]);
@@ -276,8 +264,7 @@ fn real_compiled_module_serves_itself_with_verifying_proof() {
 
 #[test]
 fn real_compiled_module_miss_returns_decoy_failing_the_client_proof_gate() {
-    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec())
-        .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
+    let guest = crate::imp::stage::embedded_guest_wasm().to_vec();
 
     let store_id = Bytes32([0x7Au8; 32]);
     let urn = rootless_urn(store_id, "index.html");
@@ -371,8 +358,7 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
     // fixture twice — once with obfuscation OFF, once ON — instantiate BOTH via
     // HostRuntime, call serve_content for the same retrieval key, and assert the
     // served bytes (ContentResponse wire bytes) are BYTE-IDENTICAL.
-    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec())
-        .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
+    let guest = crate::imp::stage::embedded_guest_wasm().to_vec();
 
     let store_id = Bytes32([0x7Au8; 32]);
     let urn = rootless_urn(store_id, "index.html");
@@ -467,8 +453,7 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
 fn obfuscated_real_module_still_serves_itself_with_verifying_proof() {
     // §17.1: obfuscation is behavior-preserving. An OBFUSCATED real module must
     // still serve itself, with the merkle proof verifying against the same root.
-    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec())
-        .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
+    let guest = crate::imp::stage::embedded_guest_wasm().to_vec();
 
     let store_id = Bytes32([0x7Au8; 32]);
     let urn = rootless_urn(store_id, "index.html");

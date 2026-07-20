@@ -14,7 +14,11 @@ fn cfg() -> HostImportsConfig {
 }
 
 fn echo_rt() -> HostRuntime {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/serve_echo.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/serve_echo.wat"
+    )))
+    .unwrap();
     HostRuntime::new(
         &module_bytes,
         cfg(),
@@ -49,7 +53,11 @@ fn serve_content_empty_request_is_ok() {
 
 #[test]
 fn serve_content_propagates_guest_error_sentinel() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/serve_err.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/serve_err.wat"
+    )))
+    .unwrap();
     let mut rt = HostRuntime::new(
         &module_bytes,
         cfg(),
@@ -66,7 +74,11 @@ fn serve_content_propagates_guest_error_sentinel() {
 
 #[test]
 fn serve_proof_propagates_guest_error_sentinel() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/serve_err.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/serve_err.wat"
+    )))
+    .unwrap();
     let mut rt = HostRuntime::new(
         &module_bytes,
         cfg(),

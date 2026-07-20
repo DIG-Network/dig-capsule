@@ -1,5 +1,9 @@
 //! `HostRuntime`: wasmtime engine + module + serve flow (§18).
 
+use crate::imp::core::abi::{is_error, unpack_ptr_len};
+use crate::imp::core::config::HostImportsConfig;
+use crate::imp::core::types::{Bytes32, Bytes48};
+use crate::imp::crypto::bls::BlsSecretKey;
 use crate::imp::host::clock::Clock;
 use crate::imp::host::config::ExecutionLimits;
 use crate::imp::host::error::HostError;
@@ -8,10 +12,6 @@ use crate::imp::host::random::HostRng;
 use crate::imp::host::session::SessionTable;
 use crate::imp::host::state::{HostKeys, HostState, ReturnBuffer};
 use crate::imp::host::teehook::{BlsAttestationBackend, SharedBackend};
-use crate::imp::core::abi::{is_error, unpack_ptr_len};
-use crate::imp::core::config::HostImportsConfig;
-use crate::imp::core::types::{Bytes32, Bytes48};
-use crate::imp::crypto::bls::BlsSecretKey;
 use crate::imp::prover::{ChainSource, Prover};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -346,7 +346,12 @@ impl HostRuntime {
             .map_err(Self::map_trap)?;
 
         // 2. write request bytes
-        crate::imp::host::memory::write_bytes(&mut self.store, &self.memory, req_ptr as u32, request)?;
+        crate::imp::host::memory::write_bytes(
+            &mut self.store,
+            &self.memory,
+            req_ptr as u32,
+            request,
+        )?;
 
         // 3. call get_content/get_proof(ptr, len)
         let serve: TypedFunc<(i32, i32), i64> = self

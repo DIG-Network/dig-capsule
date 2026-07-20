@@ -2,8 +2,8 @@
 //! framing (DOC DEVIATION: big-endian, not the paper's little-endian note —
 //! Chia compatibility wins). Optional<T> = 1 tag byte; range = Optional<(u64,u64)>.
 
-use alloc::vec::Vec;
 use crate::imp::core::Bytes32;
+use alloc::vec::Vec;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ValidityWindow {

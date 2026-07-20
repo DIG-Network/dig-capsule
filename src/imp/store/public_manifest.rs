@@ -8,10 +8,10 @@
 //! compiler embeds as the `.dig` `PublicManifest` section and the CLI `manifest`
 //! command prints.
 
-use crate::imp::store::error::{Result, StoreError};
-use crate::imp::store::generation::GenerationManifest;
 use crate::imp::core::serving::concat_output;
 use crate::imp::core::{resource_leaf, Bytes32, PublicManifest, PublicManifestEntry};
+use crate::imp::store::error::{Result, StoreError};
+use crate::imp::store::generation::GenerationManifest;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -163,8 +163,8 @@ fn global_chunk_index(generations_dir: &Path) -> Result<BTreeMap<String, PathBuf
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::imp::store::generation::{ChunkRef, KeyTableRecord};
     use crate::imp::core::resource_leaf;
+    use crate::imp::store::generation::{ChunkRef, KeyTableRecord};
     use tempfile::tempdir;
 
     /// One test resource: `(resource_key, ordered (chunk_hash, ciphertext body))`.

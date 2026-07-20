@@ -14,7 +14,11 @@ fn cfg() -> HostImportsConfig {
 }
 
 fn rb_rt() -> HostRuntime {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/return_buffer.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/return_buffer.wat"
+    )))
+    .unwrap();
     HostRuntime::new(
         &module_bytes,
         cfg(),

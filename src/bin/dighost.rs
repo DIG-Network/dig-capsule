@@ -18,8 +18,8 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
-use dig_capsule::format::{Bytes32, Bytes48};
 use dig_capsule::crypto::bls::BlsSecretKey;
+use dig_capsule::format::{Bytes32, Bytes48};
 use dig_capsule::host::{serve_blind, BlindServeConfig};
 use dig_capsule::urn::DigUrn;
 use object_store::aws::AmazonS3Builder;

@@ -33,6 +33,7 @@ pub mod error;
 pub mod fixtures;
 pub mod kdf;
 
+pub use crate::imp::core::hash::sha256;
 pub use aead::{decrypt_chunk, encrypt_chunk};
 pub use bls::{
     attestation_signing_message, bls_keygen, bls_sign, bls_verify, node_signing_message,
@@ -40,7 +41,6 @@ pub use bls::{
     sign_request, sign_tombstone, tombstone_signing_message, validate_public_key, verify_push,
     verify_request, verify_tombstone,
 };
-pub use crate::imp::core::hash::sha256;
 pub use error::{BlsError, CryptoError, TamperError};
 pub use fixtures::{
     write_bls_fixtures, write_kdf_fixtures, BlsFixture, BlsFixtureSet, KdfFixture, KdfFixtureSet,

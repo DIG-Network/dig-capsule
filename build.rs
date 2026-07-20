@@ -15,6 +15,29 @@ fn main() {
     #[cfg(feature = "compile")]
     embed_guest_wasm();
     #[cfg(feature = "risc0")]
+    embed_risc0_methods();
+}
+
+/// (c) Embed the RISC0 zkVM serving-guest ELF (`guest-risc0/`).
+///
+/// The guest manifest ships as `guest-risc0/Cargo.toml.template` (NOT `Cargo.toml`)
+/// so `cargo publish` includes the guest sources: cargo auto-excludes any subdirectory
+/// that holds its own `Cargo.toml` (a nested package), even from an explicit `include`,
+/// which would otherwise drop the guest from the published tarball. We materialize the
+/// real `Cargo.toml` here (idempotent) just before `embed_methods()`, which reads
+/// `[package.metadata.risc0] methods = ["guest-risc0"]` and builds the guest.
+#[cfg(feature = "risc0")]
+fn embed_risc0_methods() {
+    use std::path::PathBuf;
+
+    let guest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("guest-risc0");
+    let template = guest_dir.join("Cargo.toml.template");
+    let manifest = guest_dir.join("Cargo.toml");
+    let bytes = std::fs::read(&template).expect("read guest-risc0/Cargo.toml.template");
+    std::fs::write(&manifest, &bytes).expect("materialize guest-risc0/Cargo.toml");
+    println!("cargo:rerun-if-changed=guest-risc0/Cargo.toml.template");
+    println!("cargo:rerun-if-changed=guest-risc0/src/main.rs");
+
     risc0_build::embed_methods();
 }
 

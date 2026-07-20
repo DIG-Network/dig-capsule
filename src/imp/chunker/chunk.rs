@@ -1,6 +1,6 @@
 use crate::imp::core::Bytes32;
-use sha2::{Digest, Sha256};
 use alloc::vec::Vec;
+use sha2::{Digest, Sha256};
 
 /// A single content-defined chunk: its raw bytes, the byte offset of its first
 /// byte within the original input, and its SHA-256 content address (paper §8.1).

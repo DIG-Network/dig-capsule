@@ -1,5 +1,5 @@
-use crate::imp::prover::error::Result;
 use crate::imp::core::ChiaBlockRef;
+use crate::imp::prover::error::Result;
 
 /// A source of Chia chain state for anchoring proofs to wall-clock time
 /// (§13.8). Implemented by [`crate::imp::prover::mock_chain::MockChainSource`] and

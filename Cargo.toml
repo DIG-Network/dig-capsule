@@ -15,6 +15,24 @@ description = "The DIG Network .dig capsule data plane — one crate over the DI
 readme = "README.md"
 keywords = ["dig", "chia", "content-addressed", "capsule", "storage"]
 categories = ["cryptography", "encoding", "data-structures"]
+# Explicit package file set — a complete, minimal build surface for crates.io. The
+# RISC0 guest ships as `guest-risc0/Cargo.toml.template` (+ src): cargo auto-EXCLUDES
+# any subdir that holds its own `Cargo.toml` (a nested package), even from `include`,
+# so the guest manifest is a `.template` that build.rs job (c) materializes to
+# `Cargo.toml` before `embed_methods()` — this keeps the guest sources in the tarball
+# so a `--features risc0` build from crates.io can resolve the methods.
+include = [
+    "src/**/*",
+    "build.rs",
+    "fixtures/**/*",
+    "tests/fixtures/**/*",
+    "guest-risc0/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "SPEC.md",
+]
 
 [lib]
 name = "dig_capsule"

@@ -1,3 +1,8 @@
+use crate::imp::chunker::chunk_slice;
+use crate::imp::core::serving::concat_output;
+use crate::imp::core::{
+    Bytes32, ChunkerConfig, GenerationState, MerkleTree, SecretSalt, StoreConfig, Visibility,
+};
 use crate::imp::store::chunkstore::ChunkStore;
 use crate::imp::store::clock::Clock;
 use crate::imp::store::config::{load_config, save_config};
@@ -6,11 +11,6 @@ use crate::imp::store::generation::{ChunkRef, GenerationManifest, KeyTableRecord
 use crate::imp::store::history::RootHistory;
 use crate::imp::store::paths::StorePaths;
 use crate::imp::store::staging::StagingArea;
-use crate::imp::chunker::chunk_slice;
-use crate::imp::core::serving::concat_output;
-use crate::imp::core::{
-    Bytes32, ChunkerConfig, GenerationState, MerkleTree, SecretSalt, StoreConfig, Visibility,
-};
 use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn, CANONICAL_CHAIN};
 use std::path::Path;
 

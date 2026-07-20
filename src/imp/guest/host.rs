@@ -1,8 +1,8 @@
 //! Host abstraction. All guest logic depends on `&dyn DigHost`, never on the
 //! raw `dig_host` imports directly, so logic is unit-testable natively.
 
-use alloc::vec::Vec;
 use crate::imp::core::ErrorCode;
+use alloc::vec::Vec;
 
 /// Result of a host import: either bytes written to the return buffer, or an error code.
 pub type HostResult = Result<Vec<u8>, ErrorCode>;
@@ -30,7 +30,9 @@ pub struct WasmHost;
 #[cfg(target_arch = "wasm32")]
 impl DigHost for WasmHost {
     fn get_public_key(&self) -> HostResult {
-        crate::imp::guest::imports::read_result(unsafe { crate::imp::guest::imports::host_get_public_key() })
+        crate::imp::guest::imports::read_result(unsafe {
+            crate::imp::guest::imports::host_get_public_key()
+        })
     }
     fn create_attestation(&self, challenge: &[u8]) -> HostResult {
         crate::imp::guest::imports::read_result(unsafe {
@@ -54,6 +56,8 @@ impl DigHost for WasmHost {
         unsafe { crate::imp::guest::imports::host_get_current_time() as u64 }
     }
     fn random_bytes(&self, count: u32) -> HostResult {
-        crate::imp::guest::imports::read_result(unsafe { crate::imp::guest::imports::host_random_bytes(count as i32) })
+        crate::imp::guest::imports::read_result(unsafe {
+            crate::imp::guest::imports::host_random_bytes(count as i32)
+        })
     }
 }

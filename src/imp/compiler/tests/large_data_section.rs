@@ -16,7 +16,6 @@
 //!   * `merkle_proof.verify()` is true,
 //!   * the client GCM-opens the served ciphertext back to the original plaintext.
 
-
 use crate::imp::compiler::{Compiler, CompilerConfig, GenerationView, ResourceView};
 use crate::imp::core::config::HostImportsConfig;
 use crate::imp::core::merkle::MerkleTree;
@@ -46,11 +45,6 @@ use crate::imp::host::{ExecutionLimits, FixedClock, HostDeps, HostRuntime};
 use crate::imp::prover::{MockChainSource, MockProver};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
-
-const GUEST_WASM: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../target/wasm32-unknown-unknown/release/dig_capsule_guest.wasm"
-);
 
 fn sha256(b: &[u8]) -> Bytes32 {
     let mut h = Sha256::new();
@@ -139,13 +133,7 @@ fn content_request(retrieval_key: Bytes32) -> Vec<u8> {
 }
 
 fn read_guest_wasm() -> Vec<u8> {
-    match Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec()) {
-        Ok(b) => b,
-        Err(e) => panic!(
-            "guest wasm missing at {GUEST_WASM}: {e}. Build it first: \
-             cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release"
-        ),
-    }
+    crate::imp::stage::embedded_guest_wasm().to_vec()
 }
 
 /// Compile a one-resource store whose single chunk is `payload` plaintext, drive

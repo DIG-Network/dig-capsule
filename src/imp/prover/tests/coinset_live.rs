@@ -12,7 +12,10 @@
 use crate::imp::core::{Bytes32, ChiaBlockRef};
 use crate::imp::prover::{ChainSource, CoinsetChainSource};
 
-const STATE_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/get_blockchain_state.json"));
+const STATE_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/get_blockchain_state.json"
+));
 
 /// A transaction-block record at the peak height so `verify_block`'s on-chain
 /// header-hash check matches the peak and finds a timestamp without walking.

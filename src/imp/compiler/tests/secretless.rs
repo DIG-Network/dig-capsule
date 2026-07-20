@@ -9,7 +9,6 @@
 //!      manifest text) are PRESENT — proving the scan actually reaches the data
 //!      the guest serves (so absence of secrets is meaningful, not vacuous).
 
-
 use super::common::{chunk, resource_key, sample_manifest, store_id, FakeGeneration, ResourceSpec};
 use crate::imp::compiler::{Compiler, CompilerConfig};
 use crate::imp::core::{Bytes32, Bytes48, TrustedHostKey};

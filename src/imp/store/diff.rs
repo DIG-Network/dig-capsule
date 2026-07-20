@@ -1,5 +1,5 @@
-use crate::imp::store::generation::GenerationManifest;
 use crate::imp::core::Bytes32;
+use crate::imp::store::generation::GenerationManifest;
 
 /// Difference between two generations (§20.4): chunk-set delta + resource-key
 /// delta. Results are sorted by hex / lexicographic order for determinism.
@@ -58,8 +58,8 @@ impl GenerationDiff {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::imp::store::generation::{ChunkRef, GenerationManifest, KeyTableRecord};
     use crate::imp::core::Bytes32;
+    use crate::imp::store::generation::{ChunkRef, GenerationManifest, KeyTableRecord};
 
     fn b(x: u8) -> Bytes32 {
         Bytes32([x; 32])

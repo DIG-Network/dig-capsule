@@ -5,7 +5,11 @@ use super::common::test_deps;
 
 #[test]
 fn instantiate_echo_and_call_get_store_id() {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/echo.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/echo.wat"
+    )))
+    .unwrap();
     let cfg = HostImportsConfig {
         return_buffer_capacity: 64 * 1024,
         max_return_buffer_size: 16 * 1024 * 1024,

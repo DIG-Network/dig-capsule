@@ -21,7 +21,6 @@
 //!    `dig-capsule-crypto/tests/fixtures/bls_vectors.json` (the plan referenced a
 //!    non-existent `crate::imp::crypto::test_vectors` module).
 
-
 pub mod allocator;
 pub mod host;
 

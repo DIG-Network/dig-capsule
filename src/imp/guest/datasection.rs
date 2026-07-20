@@ -15,10 +15,10 @@
 //! and the `__digstore_data`/`__digstore_data_end` extern-symbol scheme are all
 //! removed.
 
-use alloc::vec::Vec;
 use crate::imp::core::datasection::{lookup_key as core_lookup_key, DataView};
 use crate::imp::core::Bytes32;
 use crate::imp::core::KeyTableEntry;
+use alloc::vec::Vec;
 
 // Canonical section identifiers + key-table codec come straight from core, so
 // the guest, compiler, and client all agree byte-for-byte.

@@ -6,10 +6,18 @@
 //! [`crate`] (`capsule`, `urn`, `format`, `merkle`, `chunk`, `metadata`,
 //! `crypto`, `store`, `compile`, `stage`, `host`, `prover`, `guest`) — never on
 //! `imp::*` directly. The feature gates below mirror the facade's exactly.
+//!
+//! These lints are allowed for the WHOLE `imp` tree because it is inlined member
+//! source preserved verbatim: each former crate keeps its full public re-export
+//! surface (some items the curated facade doesn't surface are now internally unused
+//! — `unused_imports`/`dead_code`), and a former top crate `foo` with an inner
+//! `foo.rs` now nests as `imp::foo::foo` (`clippy::module_inception`). None is a
+//! real defect; pruning would shrink the preserved member surface (#1270).
+#![allow(unused_imports, dead_code, clippy::module_inception)]
 
 // The always-on no_std+alloc base (former dig-capsule-core / dig-capsule-chunker).
-pub(crate) mod core;
 pub(crate) mod chunker;
+pub(crate) mod core;
 
 // Native capsule crypto (AEAD + Chia-BLS). Base facade module `crypto` gates on this.
 #[cfg(feature = "crypto")]

@@ -12,7 +12,6 @@
 //! a Decoy, while a fresh one releases content. This proves the gate does NOT
 //! short-circuit freshness by comparing the timestamp against itself.
 
-
 use crate::imp::core::{Bytes32, KeyTableEntry};
 use crate::imp::guest::content::{serve_content, ContentOutcome, GateConfig};
 use crate::imp::guest::datasection::{encode_blob, encode_key_table, DataSection, SectionId};

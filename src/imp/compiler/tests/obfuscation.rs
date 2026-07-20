@@ -1,4 +1,3 @@
-
 use super::common::{sample_generations, sample_manifest, store_id, store_pubkey, trusted_keys};
 use crate::imp::compiler::{load_template, Compiler, CompilerConfig};
 use wasmtime::{Engine, Instance, Module, Store};

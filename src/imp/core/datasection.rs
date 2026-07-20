@@ -440,7 +440,9 @@ pub fn read_chain_state(blob: &[u8]) -> Result<Option<ChainState>, DecodeError> 
 // ---------------------------------------------------------------------------
 
 /// Encode the `PublicManifest` section body (id 13).
-pub fn encode_public_manifest(manifest: &crate::imp::core::public_manifest::PublicManifest) -> Vec<u8> {
+pub fn encode_public_manifest(
+    manifest: &crate::imp::core::public_manifest::PublicManifest,
+) -> Vec<u8> {
     manifest.to_bytes()
 }
 
@@ -452,9 +454,9 @@ pub fn read_public_manifest(
 ) -> Result<Option<crate::imp::core::public_manifest::PublicManifest>, DecodeError> {
     let view = DataView::parse(blob)?;
     match view.section(SectionId::PublicManifest) {
-        Some(body) => Ok(Some(crate::imp::core::public_manifest::PublicManifest::from_bytes(
-            body,
-        )?)),
+        Some(body) => Ok(Some(
+            crate::imp::core::public_manifest::PublicManifest::from_bytes(body)?,
+        )),
         None => Ok(None),
     }
 }

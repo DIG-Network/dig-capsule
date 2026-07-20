@@ -10,12 +10,12 @@
 //! Signing uses the Chia AugScheme: the public key is prepended to the message
 //! and hashed with the Chia DST before signing into G2.
 
+use crate::imp::core::{AttestationChallenge, Bytes32, Bytes48, Bytes96, Tombstone};
 use crate::imp::crypto::error::{BlsError, CryptoError};
 use chia_bls::{
     sign as aug_sign, verify as aug_verify, PublicKey as ChiaPublicKey, SecretKey as ChiaSecretKey,
     Signature as ChiaSignature,
 };
-use crate::imp::core::{AttestationChallenge, Bytes32, Bytes48, Bytes96, Tombstone};
 
 /// Host-side BLS signing key (wraps `chia_bls::SecretKey`, blst backend).
 pub struct SecretKey(ChiaSecretKey);

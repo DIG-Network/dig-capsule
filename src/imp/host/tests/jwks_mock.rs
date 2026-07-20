@@ -16,7 +16,11 @@ fn cfg() -> HostImportsConfig {
 }
 
 fn probe_runtime(clock: FixedClock) -> HostRuntime {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/import_probe.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/import_probe.wat"
+    )))
+    .unwrap();
     HostRuntime::new(
         &module_bytes,
         cfg(),

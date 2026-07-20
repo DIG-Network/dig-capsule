@@ -1,5 +1,5 @@
-use crate::imp::crypto::derive_decryption_key;
 use crate::imp::core::SecretSalt;
+use crate::imp::crypto::derive_decryption_key;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::path::Path;

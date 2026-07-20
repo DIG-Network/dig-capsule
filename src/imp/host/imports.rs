@@ -1,8 +1,8 @@
 //! Registration of the eight `dig_host` import functions (§6.3, §12, §18.3).
 
+use crate::imp::core::abi::ErrorCode;
 use crate::imp::host::error::HostError;
 use crate::imp::host::runtime::RuntimeState;
-use crate::imp::core::abi::ErrorCode;
 use std::net::{IpAddr, ToSocketAddrs};
 use wasmtime::{Caller, Linker};
 

@@ -1,7 +1,7 @@
+use crate::imp::core::{Bytes32, Bytes48, ExecutionProof, ProofResponse};
 use crate::imp::prover::chain::ChainSource;
 use crate::imp::prover::error::{ProverError, Result};
 use crate::imp::prover::serving_inputs::ServingInputs;
-use crate::imp::core::{Bytes32, Bytes48, ExecutionProof, ProofResponse};
 
 /// Produces an [`ExecutionProof`] for a serving run (§13.1-13.3).
 ///
@@ -91,7 +91,8 @@ pub trait Verifier {
         trusted_roots: &[Bytes32],
         chain: &dyn ChainSource,
     ) -> Result<()> {
-        let (nonce, _block) = crate::imp::prover::commitment::parse_public_input(&proof.public_input)?;
+        let (nonce, _block) =
+            crate::imp::prover::commitment::parse_public_input(&proof.public_input)?;
         if &nonce != expected_nonce {
             return Err(ProverError::NonceMismatch);
         }

@@ -1,6 +1,6 @@
+use crate::imp::core::ChiaBlockRef;
 use crate::imp::prover::chain::ChainSource;
 use crate::imp::prover::error::{ProverError, Result};
-use crate::imp::core::ChiaBlockRef;
 use std::collections::HashMap;
 
 /// Deterministic in-memory [`ChainSource`] for tests. Holds a fixed set of

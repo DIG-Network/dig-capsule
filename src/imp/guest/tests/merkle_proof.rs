@@ -7,7 +7,7 @@
 //!   * `proof.root == injected current_root`, and
 //!   * `proof.leaf == SHA-256(served ciphertext)` (per-resource leaf, D5).
 
-
+use super::mock_host::MockHost;
 use crate::imp::core::datasection::{encode_blob, encode_merkle_nodes, SectionId};
 use crate::imp::core::merkle::MerkleTree;
 use crate::imp::core::serving::concat_output;
@@ -15,7 +15,6 @@ use crate::imp::core::{Bytes32, KeyTableEntry};
 use crate::imp::guest::content::{serve_content, ContentOutcome, GateConfig};
 use crate::imp::guest::datasection::{encode_key_table, DataSection};
 use crate::imp::guest::request::ContentRequest;
-use super::mock_host::MockHost;
 use sha2::{Digest, Sha256};
 
 fn sha256(bytes: &[u8]) -> Bytes32 {

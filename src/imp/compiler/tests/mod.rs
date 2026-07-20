@@ -1,7 +1,7 @@
 //! Migrated per-member tests, run as inline unit tests of the collapsed crate (#1270).
-mod common;
 mod auth_policy;
 mod chunk_index;
+mod common;
 mod compiler_version;
 mod data_section_golden;
 mod determinism;

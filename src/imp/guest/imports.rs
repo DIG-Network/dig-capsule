@@ -1,8 +1,8 @@
 //! Raw `dig_host` imports + safe wrappers + return-buffer reader. Wasm-only.
 
+use crate::imp::core::ErrorCode;
 use alloc::vec;
 use alloc::vec::Vec;
-use crate::imp::core::ErrorCode;
 
 #[link(wasm_import_module = "dig_host")]
 extern "C" {

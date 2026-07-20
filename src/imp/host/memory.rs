@@ -47,7 +47,10 @@ mod tests {
 
     fn fixture() -> (Store<()>, Memory) {
         let engine = Engine::default();
-        let wat = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/echo.wat"));
+        let wat = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/wat/echo.wat"
+        ));
         let bytes = wat::parse_str(wat).unwrap();
         let module = Module::new(&engine, &bytes).unwrap();
         let mut store = Store::new(&engine, ());
@@ -68,6 +71,9 @@ mod tests {
     fn read_out_of_bounds_errors() {
         let (store, mem) = fixture();
         let err = read_bytes(&store, &mem, u32::MAX, 16).unwrap_err();
-        assert!(matches!(err, crate::imp::host::error::HostError::OutOfBounds));
+        assert!(matches!(
+            err,
+            crate::imp::host::error::HostError::OutOfBounds
+        ));
     }
 }

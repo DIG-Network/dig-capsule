@@ -3,9 +3,9 @@
 //! reach out to fetch JWKS (NoSession). Mirrors the host-side gate so the guest
 //! fails closed even if a buggy host forgets to enforce it.
 
+use crate::imp::core::ErrorCode;
 use crate::imp::guest::host::DigHost;
 use alloc::vec::Vec;
-use crate::imp::core::ErrorCode;
 
 /// Ensure a session exists; establish one if absent. Returns the session token bytes.
 pub fn ensure_session<H: DigHost + ?Sized>(

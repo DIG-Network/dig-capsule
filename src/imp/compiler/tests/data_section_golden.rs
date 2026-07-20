@@ -5,7 +5,6 @@
 //! canonical `DataView` so the compiler's emitted bytes are exactly what the
 //! guest reads and the client verifies.
 
-
 use crate::imp::compiler::{encode_data_section, DataSectionInputs};
 use crate::imp::core::datasection::{
     decode_merkle_leaves, lookup_key, read_chunk, DataView, SectionId,
@@ -118,7 +117,11 @@ fn structure_is_independently_valid() {
 fn data_section_matches_golden_vector() {
     let blob = encode_data_section(&fixed_inputs());
     let got = hex::encode(&blob);
-    let expected = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/golden_data_section.hex")).trim();
+    let expected = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/golden_data_section.hex"
+    ))
+    .trim();
     if got != expected {
         eprintln!("GOLDEN MISMATCH. Review the structural test, then if intentional update the fixture to:\n{got}");
     }
@@ -135,7 +138,11 @@ fn data_section_matches_golden_vector() {
 #[test]
 fn new_reader_accepts_older_golden_without_public_manifest() {
     use crate::imp::core::datasection::read_public_manifest;
-    let hex = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/golden_data_section.hex")).trim();
+    let hex = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/golden_data_section.hex"
+    ))
+    .trim();
     let blob = hex::decode(hex).expect("golden fixture is valid hex");
     // Parses cleanly through the current DataView + every existing section is
     // still readable (guarded by `structure_is_independently_valid`).

@@ -5,6 +5,7 @@
 //! `get_proof` returns a serialized `ProofPrelude` (NOT an `ExecutionProof` — the
 //! guest cannot produce ZK proofs in wasm; the host wraps the prelude later).
 
+use crate::imp::core::codec::{Encode, Encoder};
 use crate::imp::guest::content::{serve_content_wire, GateConfig};
 use crate::imp::guest::datasection::embedded;
 use crate::imp::guest::host::WasmHost;
@@ -13,7 +14,6 @@ use crate::imp::guest::packing::guest_pack;
 use crate::imp::guest::proof::{serve_proof, ProofOutcome};
 use crate::imp::guest::request::{ContentRequest, ProofRequest};
 use alloc::vec::Vec;
-use crate::imp::core::codec::{Encode, Encoder};
 
 /// Encode any core wire struct to a byte vec via the shared big-endian Encoder.
 fn encode_to_vec<T: Encode>(value: &T) -> Vec<u8> {

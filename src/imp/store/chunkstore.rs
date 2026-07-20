@@ -1,5 +1,5 @@
-use crate::imp::store::error::{Result, StoreError};
 use crate::imp::core::Bytes32;
+use crate::imp::store::error::{Result, StoreError};
 use std::path::{Path, PathBuf};
 
 /// Per-directory content-addressed, write-once chunk store. One file per unique

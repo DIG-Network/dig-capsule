@@ -1,10 +1,10 @@
+use crate::imp::core::{Bytes32, ChiaBlockRef, ExecutionProof};
+use crate::imp::crypto::{bls, sha256};
 use crate::imp::prover::chain::ChainSource;
 use crate::imp::prover::commitment::{parse_public_input, signing_message};
 use crate::imp::prover::error::{ProverError, Result};
 use crate::imp::prover::prover::{Prover, Verifier};
 use crate::imp::prover::serving_inputs::ServingInputs;
-use crate::imp::core::{Bytes32, ChiaBlockRef, ExecutionProof};
-use crate::imp::crypto::{bls, sha256};
 
 const MOCK_DOMAIN: &[u8] = b"digstore-mock-proof-v1";
 

@@ -1,6 +1,6 @@
-use crate::imp::prover::error::{ProverError, Result};
 use crate::imp::core::codec::{Decode, Decoder, Encode, Encoder};
 use crate::imp::core::ChiaBlockRef;
+use crate::imp::prover::error::{ProverError, Result};
 
 /// Length of the client nonce that prefixes `public_input` (§13.5).
 pub const NONCE_LEN: usize = 32;

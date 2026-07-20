@@ -1,5 +1,5 @@
-use crate::imp::store::error::{Result, StoreError};
 use crate::imp::core::{Bytes32, KeyTableEntry};
+use crate::imp::store::error::{Result, StoreError};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::path::Path;

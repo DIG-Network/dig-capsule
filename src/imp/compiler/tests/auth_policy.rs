@@ -9,7 +9,6 @@
 //!     configured jwks_url and accepted_algorithms;
 //!   * a session-required store -> guest reports requires_session=true.
 
-
 use super::common::{sample_generations, sample_manifest, store_id, store_pubkey, trusted_keys};
 use crate::imp::compiler::{Compiler, CompilerConfig};
 use crate::imp::core::config::HostImportsConfig;
@@ -18,11 +17,6 @@ use crate::imp::crypto::bls::BlsSecretKey;
 use crate::imp::host::{ExecutionLimits, FixedClock, HostDeps, HostRuntime};
 use crate::imp::prover::{MockChainSource, MockProver};
 use std::sync::Arc;
-
-const GUEST_WASM: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../target/wasm32-unknown-unknown/release/dig_capsule_guest.wasm"
-);
 
 fn host_deps(store_id: Bytes32) -> HostDeps {
     // The embedded trusted key is the public half of seed [42u8;32] (common.rs).
@@ -53,10 +47,7 @@ fn host_deps(store_id: Bytes32) -> HostDeps {
 /// Compile a real module embedding `auth`, then read back the guest's
 /// `get_authentication_info` and decode it as the canonical `AuthenticationInfo`.
 fn compile_and_read_auth(tag: &str, auth: AuthenticationInfo) -> AuthenticationInfo {
-    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec()).expect(
-        "guest wasm must be built: \
-         cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release",
-    );
+    let guest = crate::imp::stage::embedded_guest_wasm().to_vec();
     let dir = std::env::temp_dir().join(format!("digc-auth-{tag}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let cfg = CompilerConfig {

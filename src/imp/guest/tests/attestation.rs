@@ -9,8 +9,10 @@ use crate::imp::guest::attestation::{
 };
 use serde_json::Value;
 
-const BLS_VECTORS_JSON: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/bls_vectors.json"));
+const BLS_VECTORS_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/bls_vectors.json"
+));
 
 struct Vector {
     pubkey: [u8; 48],

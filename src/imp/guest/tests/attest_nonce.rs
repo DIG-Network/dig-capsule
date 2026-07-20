@@ -6,7 +6,6 @@
 //! `verify_attestation` (and therefore the gate) accepts ONLY a host signature
 //! over that exact challenge.
 
-
 use crate::imp::core::{Bytes32, KeyTableEntry};
 use crate::imp::guest::attestation::build_challenge;
 use crate::imp::guest::content::{serve_content, ContentOutcome, GateConfig};

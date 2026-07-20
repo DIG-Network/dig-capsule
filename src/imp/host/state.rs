@@ -1,13 +1,13 @@
 //! Per-instance host state shared with the `dig_host` imports (§6.4, §12, §18.3).
 
+use crate::imp::core::config::HostImportsConfig;
+use crate::imp::core::types::{Bytes32, Bytes48, Bytes96};
+use crate::imp::crypto::bls::BlsSecretKey;
 use crate::imp::host::clock::Clock;
 use crate::imp::host::error::HostError;
 use crate::imp::host::random::HostRng;
 use crate::imp::host::session::SessionTable;
 use crate::imp::host::teehook::SharedBackend;
-use crate::imp::core::config::HostImportsConfig;
-use crate::imp::core::types::{Bytes32, Bytes48, Bytes96};
-use crate::imp::crypto::bls::BlsSecretKey;
 use crate::imp::prover::{ChainSource, Prover};
 use std::sync::Arc;
 

@@ -8,11 +8,11 @@
 //! `no_std`-clean on wasm32: the seed selects one of N log-spaced buckets
 //! (each ~2x the previous) and a deterministic offset within that bucket.
 
+use crate::imp::core::Bytes32;
 use alloc::vec;
 use alloc::vec::Vec;
 use chacha20::cipher::{KeyIvInit, StreamCipher};
 use chacha20::ChaCha20;
-use crate::imp::core::Bytes32;
 use sha2::{Digest, Sha256};
 
 const MIN_SIZE: usize = 1024;

@@ -5,9 +5,9 @@
 //! AugScheme). A hardware-attestation backend can replace it behind the same
 //! import surface without touching the linker wiring (§13.6).
 
-use crate::imp::host::error::HostError;
 use crate::imp::core::types::{Bytes48, Bytes96};
 use crate::imp::crypto::bls::BlsSecretKey;
+use crate::imp::host::error::HostError;
 use std::sync::Arc;
 
 /// Pluggable attestation backend (§13.6). Default is BLS; a TEE backend can

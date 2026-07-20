@@ -1,5 +1,5 @@
-use crate::imp::store::error::{Result, StoreError};
 use crate::imp::core::{Bytes32, GenerationState};
+use crate::imp::store::error::{Result, StoreError};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 

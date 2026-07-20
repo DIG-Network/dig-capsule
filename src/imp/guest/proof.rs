@@ -10,13 +10,13 @@
 //! `dig_capsule_prover` (and signs `node_signature`). On a miss the guest returns a
 //! deterministic decoy prelude (indistinguishable success).
 
+use crate::imp::core::{Bytes32, ProofPrelude};
 use crate::imp::guest::content::GateConfig;
 use crate::imp::guest::datasection::{DataSection, SectionId};
 use crate::imp::guest::host::DigHost;
 use crate::imp::guest::oblivious::build_access_plan;
 use crate::imp::guest::request::ProofRequest;
 use alloc::vec::Vec;
-use crate::imp::core::{Bytes32, ProofPrelude};
 use sha2::{Digest, Sha256};
 
 pub enum ProofOutcome {

@@ -16,9 +16,9 @@
 //! the `risc0` feature is enabled (which needs the RISC0 toolchain). See
 //! `SECURITY.md` residual #3.
 
+use crate::imp::core::{Bytes32, ChiaBlockRef};
 use crate::imp::prover::chain::ChainSource;
 use crate::imp::prover::error::{ProverError, Result};
-use crate::imp::core::{Bytes32, ChiaBlockRef};
 use serde::Deserialize;
 
 /// A Chia `BlockRecord` (subset we need). `timestamp` is `None` on

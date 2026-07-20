@@ -12,7 +12,6 @@
 //! tied it to `env!("CARGO_PKG_VERSION")` only held while the crate version WAS
 //! 1.0.0 and are removed.
 
-
 use super::common::{sample_generations, sample_manifest, store_id, store_pubkey, trusted_keys};
 use crate::imp::compiler::{Compiler, CompilerConfig, COMPILER_VERSION};
 

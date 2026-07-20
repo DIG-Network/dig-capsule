@@ -270,7 +270,9 @@ pub struct ModuleIdentity {
 /// Extract the raw data-section blob from a compiled module (the bytes a
 /// `DataView`/`read_chain_state` parses). Thin public wrapper over the internal
 /// extraction used by `verify_module_root`.
-pub fn extract_data_section_blob(module: &[u8]) -> Result<Vec<u8>, crate::imp::compiler::error::CompilerError> {
+pub fn extract_data_section_blob(
+    module: &[u8],
+) -> Result<Vec<u8>, crate::imp::compiler::error::CompilerError> {
     use crate::imp::compiler::inject::extract_data_section;
     use crate::imp::compiler::pipeline::DATA_SECTION_MEM_OFFSET;
     extract_data_section(module, DATA_SECTION_MEM_OFFSET)

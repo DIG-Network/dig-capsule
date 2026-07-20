@@ -1,7 +1,7 @@
-use alloc::vec::Vec;
 use crate::imp::chunker::boundary::find_boundary;
 use crate::imp::chunker::chunk::Chunk;
 use crate::imp::core::ChunkerConfig;
+use alloc::vec::Vec;
 
 /// A reusable content-defined chunker bound to a `ChunkerConfig`.
 pub struct Chunker {

@@ -3,9 +3,9 @@
 //! NOT gated (it is public discovery info); all others are also ungated reads of
 //! the embedded data section.
 
+use crate::imp::core::{Bytes32, Bytes48};
 use crate::imp::guest::datasection::{DataSection, SectionId};
 use alloc::vec::Vec;
-use crate::imp::core::{Bytes32, Bytes48};
 
 pub fn store_id(ds: &DataSection) -> Bytes32 {
     ds.store_id()

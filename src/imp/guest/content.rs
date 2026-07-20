@@ -18,6 +18,9 @@ pub fn emit_merkle_proof(tree: &MerkleTree, leaf_index: usize) -> MerkleProof {
     })
 }
 
+use crate::imp::core::codec::Decode;
+use crate::imp::core::serving::concat_output;
+use crate::imp::core::{Bytes32, ContentResponse};
 use crate::imp::guest::datasection::{DataSection, SectionId};
 use crate::imp::guest::decoy::decoy_content_response;
 use crate::imp::guest::host::DigHost;
@@ -25,9 +28,6 @@ use crate::imp::guest::oblivious::build_access_plan;
 use crate::imp::guest::request::ContentRequest;
 use crate::imp::guest::temporal::within_window;
 use alloc::vec::Vec;
-use crate::imp::core::codec::Decode;
-use crate::imp::core::serving::concat_output;
-use crate::imp::core::{Bytes32, ContentResponse};
 
 pub struct GateConfig {
     pub require_attestation: bool,
@@ -163,7 +163,8 @@ fn gate<H: DigHost + ?Sized>(
         // `signed_time` is the timestamp BOUND INTO the challenge — the value the
         // host commits to via its signature (§12.1, "unix seconds, for freshness").
         let signed_time = host.current_time();
-        let challenge = crate::imp::guest::attestation::build_challenge(nonce32, ds.store_id().0, signed_time);
+        let challenge =
+            crate::imp::guest::attestation::build_challenge(nonce32, ds.store_id().0, signed_time);
 
         // A real host returns a signed AttestationResponse; an error => fail closed.
         let resp_bytes = host.create_attestation(&challenge).map_err(|_| ())?;
@@ -515,5 +516,10 @@ pub fn verify_request_jwt<H: DigHost + ?Sized>(
         },
     };
 
-    crate::imp::guest::jwt::verify_signature(&parts.alg, jwk, &parts.signing_input, &parts.signature)
+    crate::imp::guest::jwt::verify_signature(
+        &parts.alg,
+        jwk,
+        &parts.signing_input,
+        &parts.signature,
+    )
 }

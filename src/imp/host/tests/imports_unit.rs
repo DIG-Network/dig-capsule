@@ -36,7 +36,11 @@ fn cfg() -> HostImportsConfig {
 }
 
 fn probe_runtime(clock: FixedClock) -> HostRuntime {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/import_probe.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/import_probe.wat"
+    )))
+    .unwrap();
     HostRuntime::new(
         &module_bytes,
         cfg(),
@@ -112,7 +116,11 @@ fn host_public_key_returns_48_bytes() {
 #[test]
 fn clock_advance_is_observed_by_guest() {
     let clock = FixedClock::new(1_000);
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/import_probe.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/import_probe.wat"
+    )))
+    .unwrap();
     let mut rt = HostRuntime::new(
         &module_bytes,
         cfg(),
@@ -137,7 +145,11 @@ fn jwks_fetch_blocked_without_session() {
 }
 
 fn probe_runtime_with_clock(clock: FixedClock) -> HostRuntime {
-    let module_bytes = wat::parse_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/import_probe.wat"))).unwrap();
+    let module_bytes = wat::parse_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/wat/import_probe.wat"
+    )))
+    .unwrap();
     HostRuntime::new(
         &module_bytes,
         cfg(),

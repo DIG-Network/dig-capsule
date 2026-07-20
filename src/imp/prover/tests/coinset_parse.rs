@@ -3,9 +3,18 @@ use crate::imp::prover::coinset::{
     BlockchainStateResponse,
 };
 
-const STATE_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/get_blockchain_state.json"));
-const NOTX_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/get_block_record_by_height_notx.json"));
-const PREVTX_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/get_block_record_prev_tx.json"));
+const STATE_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/get_blockchain_state.json"
+));
+const NOTX_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/get_block_record_by_height_notx.json"
+));
+const PREVTX_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/tests/fixtures/get_block_record_prev_tx.json"
+));
 
 #[test]
 fn parses_blockchain_state_peak_into_chia_block_ref() {
