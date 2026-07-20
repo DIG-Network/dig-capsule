@@ -108,6 +108,14 @@ guest-wasm = [
   "dep:base64",
 ]
 
+# The browser + Node read-crypto surface (the `@dignetwork/dig-capsule-wasm` npm
+# package): the wasm-bindgen exports installed on `globalThis.digClient`. A `std`
+# build with NO chia-bls / wasmtime / blst — the read path needs neither BLS nor
+# randomness, only the pure `imp::core` KDF/AEAD/merkle/URN. Build it with
+# `wasm-pack build --no-default-features --features wasm` (the `full` default pulls
+# wasmtime/blst, which do NOT compile to wasm32-unknown-unknown).
+wasm = ["std", "dep:wasm-bindgen", "dep:js-sys", "dep:base64"]
+
 # The optional `dighost` reference binary (clap/tokio/object_store CLI). Not default,
 # so a plain consumer never pulls the CLI/async deps.
 dighost = [
@@ -166,6 +174,11 @@ p256 = { version = "0.13", default-features = false, features = ["ecdsa"], optio
 sha2_v09 = { package = "sha2", version = "0.9", default-features = false, optional = true }
 base64 = { version = "0.22", default-features = false, features = ["alloc"], optional = true }
 
+# wasm read-crypto surface (feature = "wasm"): the wasm-bindgen exports + the
+# `js-sys` reflection that installs `globalThis.digClient`.
+wasm-bindgen = { version = "0.2", optional = true }
+js-sys = { version = "0.3", optional = true }
+
 # risc0 (real ZK backend)
 risc0-zkvm = { version = "1.2", optional = true }
 bincode = { version = "1", optional = true }
@@ -193,6 +206,14 @@ rand_core = "0.6"
 object_store = { version = "0.11", features = ["aws"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 futures = "0.3"
+# The headless-browser test for the `wasm` read-crypto surface (tests/browser.rs).
+wasm-bindgen-test = "0.3"
+
+# The npm smoke fixture generator (examples/gen_smoke_fixture.rs). Needs the native
+# `crypto` path (present under the default `full` features).
+[[example]]
+name = "gen_smoke_fixture"
+required-features = ["crypto"]
 
 # The RISC0 serving guest (built only under `risc0`, with the RISC0 toolchain). NOT a
 # `[dependencies]` path entry (that would make crates.io reject the crate); referenced
@@ -208,3 +229,10 @@ methods = ["guest-risc0"]
 overflow-checks = true
 debug-assertions = false
 panic = "unwind"
+
+# wasm-pack size optimization for the `wasm` read-crypto build. The single native
+# `[profile.release]` stays as-is (native hardening; `panic = "unwind"` is fine on
+# wasm32 — wasm-bindgen supports it and wasm-opt handles the size); the read-crypto
+# bundle is shrunk here at the wasm-opt stage instead of by flipping native panic.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-Os']

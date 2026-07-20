@@ -1,9 +1,20 @@
-//! The `readPublicManifest` reader: decode a `.dig` data-section blob's normalized
-//! public manifest to JSON, and tolerate its absence (older `.dig` / private store).
+//! The `readPublicManifest` wasm reader: decode a `.dig` data-section blob's
+//! normalized public manifest to JSON, and tolerate its absence (older `.dig` /
+//! private store).
+//!
+//! Exercises the actual `wasm` surface (`dig_capsule::wasm_browser::read_public_manifest`)
+//! natively, so it is gated on the `wasm` feature. Run with
+//! `cargo test --features wasm`. The success / absent paths construct no `JsError`,
+//! so they run fine on the native target; the malformed-blob error path (a thrown
+//! `JsError`) is only exercisable under wasm and is covered by
+//! `imp::core::datasection::DataView::parse`'s own reject tests.
 
-use dig_capsule_core::datasection::{encode_blob, encode_public_manifest, SectionId};
-use dig_capsule_core::{Bytes32, PublicManifest, PublicManifestEntry};
-use dig_capsule_wasm::read_public_manifest;
+#![cfg(feature = "wasm")]
+
+use dig_capsule::format::datasection::{encode_blob, encode_public_manifest, SectionId};
+use dig_capsule::format::Bytes32;
+use dig_capsule::metadata::{PublicManifest, PublicManifestEntry};
+use dig_capsule::wasm_browser::read_public_manifest;
 
 fn blob_with_manifest(pm: &PublicManifest) -> Vec<u8> {
     encode_blob(&[
@@ -42,6 +53,3 @@ fn absent_manifest_is_null() {
     let blob = encode_blob(&[(SectionId::StoreId as u16, vec![1u8; 32])]);
     assert!(read_public_manifest(&blob).expect("valid blob").is_none());
 }
-// NOTE: the malformed-blob error path (a thrown `JsError`) is only exercisable
-// under wasm — constructing a `JsError` panics on the native test target — and is
-// covered by `dig_capsule_core::datasection::DataView::parse`'s own reject tests.

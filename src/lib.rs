@@ -58,13 +58,14 @@
 //!
 //! ## The browser counterpart
 //!
-//! The browser + Node read-crypto is NOT a Rust dependency: it is the
-//! **`@dignetwork/dig-capsule-wasm`** npm package, whose surface
-//! (`reconstructUrn`, `retrievalKey`, `deriveKey`, `verifyInclusion`,
+//! The browser + Node read-crypto is the [`wasm_browser`] module, gated on the
+//! **`wasm`** feature and shipped as the **`@dignetwork/dig-capsule-wasm`** npm
+//! package (built with `wasm-pack build --no-default-features --features wasm`). Its
+//! surface (`reconstructUrn`, `retrievalKey`, `deriveKey`, `verifyInclusion`,
 //! `decryptResource`, `decryptResourceToText`, `readPublicManifest`, `version`) is
 //! installed on `globalThis.digClient`. It produces byte-identical KDF/AEAD/URN/merkle
 //! output to the native [`crypto`] path here — the two are the same contract on two
-//! runtimes.
+//! runtimes (§7 conformance, `tests/parity.rs`).
 //!
 //! ## A light read (no I/O)
 //!
@@ -103,6 +104,17 @@ extern crate alloc;
 // The inlined implementation (former `dig-capsule-*` member crates). PLUMBING —
 // consumers use the curated facade modules below, never `imp::*` directly.
 pub(crate) mod imp;
+
+/// The browser + Node read-crypto surface (the `@dignetwork/dig-capsule-wasm` npm
+/// package): the wasm-bindgen exports installed on `globalThis.digClient`.
+///
+/// Compiled ONLY under the `wasm` feature (a `std` build with no chia-bls/wasmtime/
+/// blst — see the feature docs above). The `#[wasm_bindgen]` exports are crate-global
+/// regardless of this module nesting, so the JS surface + `globalThis.digClient` are
+/// identical to the former standalone crate. The read crypto is byte-identical to the
+/// native [`crypto`] path (§7 conformance, `tests/parity.rs`).
+#[cfg(feature = "wasm")]
+pub mod wasm_browser;
 
 // ---------------------------------------------------------------------------
 // Base concept modules (always compiled).

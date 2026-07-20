@@ -1,15 +1,18 @@
-//! Real-browser smoke test for the `@dignetwork/dig-capsule-wasm` wasm surface.
+//! Real-browser smoke test for the `wasm` read-crypto surface.
 //!
 //! Runs the compiled wasm-bindgen exports inside a headless browser
-//! (`wasm-pack test --headless --chrome`), proving the read-crypto contract the
-//! browser consumers (the on.dig.net loader, hub.dig.net) depend on works in a
-//! genuine browser runtime -- not just natively. The Node CommonJS entry is
-//! covered separately by `scripts/verify-pkg.mjs`, and the full proof-gated
+//! (`wasm-pack test --headless --chrome <root> -- --no-default-features
+//! --features wasm --test browser`), proving the read-crypto contract the browser
+//! consumers (the on.dig.net loader, hub.dig.net) depend on works in a genuine
+//! browser runtime -- not just natively. The Node CommonJS entry is covered
+//! separately by `wasm-npm/scripts/verify-pkg.mjs`, and the full proof-gated
 //! decrypt round-trip by the native `parity` oracle.
 
-#![cfg(target_arch = "wasm32")]
+#![cfg(all(target_arch = "wasm32", feature = "wasm"))]
 
-use dig_capsule_wasm::{derive_key, reconstruct_urn, retrieval_key, verify_inclusion, version};
+use dig_capsule::wasm_browser::{
+    derive_key, reconstruct_urn, retrieval_key, verify_inclusion, version,
+};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);

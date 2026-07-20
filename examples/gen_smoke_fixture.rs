@@ -1,12 +1,14 @@
 //! Emit a JSON fixture (to stdout) that mirrors EXACTLY what the dighub content
 //! path serves for a single-resource generation, so a JS smoke test can drive the
-//! wasm `verifyInclusion` + `decryptResource` against real host-produced bytes.
+//! `wasm` `verifyInclusion` + `decryptResource` against real host-produced bytes.
 //!
-//! Run: `cargo run -p dig-capsule-wasm --example gen_smoke_fixture`
+//! Run: `cargo run --example gen_smoke_fixture` (needs the default `crypto` feature).
 
-use dig_capsule_core::codec::Encode;
-use dig_capsule_core::{Bytes32, MerkleProof, MerkleTree, ProofStep};
-use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
+use dig_capsule::crypto::{derive_decryption_key, encrypt_chunk, sha256};
+use dig_capsule::format::codec::Encode;
+use dig_capsule::format::Bytes32;
+use dig_capsule::merkle::{MerkleProof, MerkleTree, ProofStep};
+use dig_capsule::urn::{Bytes32 as UrnBytes32, DigUrn};
 
 fn rootless_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
     DigUrn {
@@ -34,9 +36,9 @@ fn main() {
             .to_vec();
 
     let canonical = canonical_urn(store, resource);
-    let key = dig_capsule_crypto::derive_decryption_key(&canonical, None);
-    let ct = dig_capsule_crypto::encrypt_chunk(&key, &plaintext);
-    let leaf = dig_capsule_crypto::sha256(&ct);
+    let key = derive_decryption_key(&canonical, None);
+    let ct = encrypt_chunk(&key, &plaintext);
+    let leaf = sha256(&ct);
 
     // Real two-leaf generation -> a proof with a genuine sibling step.
     let sibling = Bytes32([0xeeu8; 32]);

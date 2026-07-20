@@ -1,0 +1,14 @@
+{
+  "name": "@dignetwork/dig-capsule-wasm-dev",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Build harness for the @dignetwork/dig-capsule-wasm npm package (the dig-capsule crate's `wasm` read-crypto surface). Not published; `npm run build:pkg` assembles the publishable ./pkg from the root crate built with `--no-default-features --features wasm`.",
+  "scripts": {
+    "build:web": "wasm-pack build .. --release --target web --out-dir wasm-npm/pkg-web --out-name dig_client -- --no-default-features --features wasm",
+    "build:node": "wasm-pack build .. --release --target nodejs --out-dir wasm-npm/pkg-node --out-name dig_client -- --no-default-features --features wasm",
+    "build:pkg": "npm run build:web && npm run build:node && node scripts/assemble-pkg.mjs",
+    "test:pkg": "node scripts/assemble-pkg.mjs --verify-only || (npm run build:pkg) ; node scripts/verify-pkg.mjs",
+    "smoke": "cargo run --manifest-path ../Cargo.toml --no-default-features --features crypto,wasm --example gen_smoke_fixture > smoke_fixture.json && node smoke.mjs"
+  }
+}

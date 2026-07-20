@@ -1,9 +1,9 @@
-//! # dig-client (read-crypto WASM)
+//! Browser + Node read-crypto (the `@dignetwork/dig-capsule-wasm` npm surface).
 //!
-//! Browser read-crypto for dighub. The visitor's browser does ALL the crypto so
-//! dighub / the CDN stay blind (Frontend Decision Q6; API §17). This module
-//! exposes, as `globalThis.digClient` (and as an ES module), the three read-path
-//! primitives the frontend needs to VIEW content WITHOUT trusting dighub:
+//! The visitor's browser does ALL the crypto so dighub / the CDN stay blind
+//! (Frontend Decision Q6; API §17). This module exposes, as `globalThis.digClient`
+//! (and as an ES module), the read-path primitives the frontend needs to VIEW
+//! content WITHOUT trusting dighub:
 //!
 //! 1. **URN reconstruction** for a `(store_id, root, resource_key)` and the
 //!    `retrieval_key = SHA-256(canonical_urn)` (Digstore §6.1/§7.3; API §17).
@@ -13,9 +13,12 @@
 //!    client trusts FROM THE CHAIN — never from the serving response (Digstore
 //!    §9; API §17/§18). A decoy's proof cannot verify against the real root.
 //!
-//! The crypto is byte-identical to the host-side `dig-capsule-crypto` (see
-//! `crypto.rs`), reuses `dig-capsule-core`'s `MerkleProof`, and reconstructs URNs
-//! via the canonical `dig-urn-protocol` `DigUrn`.
+//! The crypto is byte-identical to the native host-side [`crate::crypto`] path
+//! (§7 conformance, enforced by `tests/parity.rs`): this module reuses the same
+//! pure `crate::imp::core` KDF/AEAD/`MerkleProof` and reconstructs URNs via the
+//! canonical `dig-urn-protocol` `DigUrn`. It compiles ONLY under the `wasm`
+//! feature (a `std` build with no chia-bls/wasmtime/blst) — the native default
+//! surface is unchanged.
 //!
 //! ## Trust model
 //! The trusted root is read by the caller directly from coinset.org (the
@@ -26,18 +29,17 @@
 //! GCM-SIV tag fails. Confidentiality rests on URN secrecy and (private stores)
 //! the secret salt — never on decoys (API §17 honest note).
 
-extern crate alloc;
-
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 use base64::Engine;
-use dig_capsule_core::codec::Decode;
-use dig_capsule_core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
-use dig_capsule_core::{resource_leaf, Bytes32, MerkleProof, SecretSalt};
 use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn, CANONICAL_CHAIN, DEFAULT_RESOURCE_KEY};
 use wasm_bindgen::prelude::*;
+
+use crate::imp::core::codec::Decode;
+use crate::imp::core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
+use crate::imp::core::{resource_leaf, Bytes32, MerkleProof, SecretSalt};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -368,7 +370,7 @@ pub fn verify_inclusion(
 /// an error (malformed blob bytes throw).
 #[wasm_bindgen(js_name = readPublicManifest)]
 pub fn read_public_manifest(blob: &[u8]) -> Result<Option<String>, JsError> {
-    match dig_capsule_core::datasection::read_public_manifest(blob) {
+    match crate::imp::core::datasection::read_public_manifest(blob) {
         Ok(Some(pm)) => Ok(Some(pm.to_json())),
         Ok(None) => Ok(None),
         Err(_) => Err(JsError::new("data-section blob is malformed")),

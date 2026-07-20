@@ -1,19 +1,24 @@
-//! Read-path CONTRACT test (native).
+//! Read-path CONTRACT test (native, §7 conformance).
 //!
-//! `dig-capsule-wasm` no longer reproduces the crypto — it consumes the single
-//! source of truth in `dig_capsule_core::crypto` + `dig_capsule_core::resource_leaf`,
-//! the SAME code the producer (`dig-capsule-store`) and host use, which
-//! `dig-capsule-crypto` re-exports for native callers. This test anchors that
-//! contract: a known-answer KDF, the host-re-export agreeing with core,
-//! host-seals/client-opens AEAD, and a full content→leaf→merkle-proof→verify→
-//! decrypt round-trip (the exact gate `verify_inclusion_core` applies). It runs
-//! natively (it links the blst-backed `dig-capsule-crypto` to prove the host
-//! re-export path agrees with core byte-for-byte).
+//! The `wasm` browser read path does NOT reproduce the crypto — it consumes the
+//! single source of truth in `crate::imp::core::crypto` + `resource_leaf`, the SAME
+//! code the producer (the `store`/`compile` path) and host use, and which the native
+//! [`crypto`](dig_capsule::crypto) facade re-exports for native callers. This test
+//! anchors that contract: a known-answer KDF, the native `crypto` facade re-export
+//! agreeing with the pure read-path primitives, host-seals/client-opens AEAD, and a
+//! full content→leaf→merkle-proof→verify→decrypt round-trip (the exact gate
+//! `verify_inclusion_core` applies). It runs natively under the default (`full`)
+//! features, linking the blst-backed native `crypto` to prove the host re-export
+//! path agrees with the read-path core byte-for-byte.
 
-use dig_capsule_core::codec::{Decode, Encode};
-use dig_capsule_core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
-use dig_capsule_core::{resource_leaf, Bytes32, MerkleProof, MerkleTree, ProofStep, SecretSalt};
-use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
+// The read path (byte-for-byte what the browser `wasm` surface uses): the pure,
+// blst-free primitives from the format core.
+use dig_capsule::crypto::primitives::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
+use dig_capsule::format::codec::{Decode, Encode};
+use dig_capsule::format::Bytes32;
+use dig_capsule::capsule::SecretSalt;
+use dig_capsule::merkle::{resource_leaf, MerkleProof, MerkleTree, ProofStep};
+use dig_capsule::urn::{Bytes32 as UrnBytes32, DigUrn};
 
 fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
     DigUrn {
@@ -29,11 +34,11 @@ fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
 fn host_reexport_matches_core_kdf() {
     let store = Bytes32([7u8; 32]);
     let canonical = canonical_urn(store, "index.html");
-    // `dig-capsule-crypto` re-exports `dig_capsule_core::crypto`, so the host derivation
-    // is byte-identical to the contract the browser verifier uses.
+    // The native `crypto` facade re-exports the core KDF, so the host derivation is
+    // byte-identical to the contract the browser verifier uses.
     assert_eq!(
         derive_decryption_key(&canonical, None),
-        dig_capsule_crypto::derive_decryption_key(&canonical, None),
+        dig_capsule::crypto::derive_decryption_key(&canonical, None),
         "host re-export must equal the core KDF"
     );
 }
@@ -54,8 +59,8 @@ fn kdf_private_salt_changes_key() {
 fn host_seals_client_opens() {
     let key = [0x11u8; 32];
     let plaintext = b"<html><body>hello dig</body></html>".to_vec();
-    // Host seals (via the dig-capsule-crypto re-export); client opens (via core).
-    let ct = dig_capsule_crypto::encrypt_chunk(&key, &plaintext);
+    // Host seals (via the native `crypto` facade); client opens (via the read-path core).
+    let ct = dig_capsule::crypto::encrypt_chunk(&key, &plaintext);
     let opened = decrypt_chunk(&key, &ct).expect("tag must verify");
     assert_eq!(opened, plaintext, "client must open host-sealed ciphertext");
     assert_eq!(

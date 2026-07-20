@@ -77,9 +77,10 @@ if (sha256(webWasm) !== sha256(nodeWasm)) {
 const wasmSha256 = sha256(webWasm);
 const wasmSri = "sha384-" + createHash("sha384").update(webWasm).digest("base64");
 
-// 2) Version comes from the Cargo crate (the single source of truth). The
-//    `version()` wasm export returns the same string at runtime.
-const cargoToml = readFileSync(resolve(root, "Cargo.toml"), "utf8");
+// 2) Version comes from the ROOT dig-capsule crate (the single source of truth;
+//    the packaging harness lives in wasm-npm/, so the crate manifest is one level
+//    up). The `version()` wasm export returns the same string at runtime.
+const cargoToml = readFileSync(resolve(root, "..", "Cargo.toml"), "utf8");
 const versionMatch = cargoToml.match(/^\s*version\s*=\s*"([^"]+)"/m);
 if (!versionMatch) die("could not read version from Cargo.toml");
 const version = versionMatch[1];
