@@ -8,7 +8,7 @@ use dig_capsule::crypto::{derive_decryption_key, encrypt_chunk, sha256};
 use dig_capsule::format::codec::Encode;
 use dig_capsule::format::Bytes32;
 use dig_capsule::merkle::{MerkleProof, MerkleTree, ProofStep};
-use dig_capsule::urn::{Bytes32 as UrnBytes32, DigUrn};
+use dig_capsule::urn::{DigUrn, UrnBytes32};
 
 fn rootless_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
     DigUrn {

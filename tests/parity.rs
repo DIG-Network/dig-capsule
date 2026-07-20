@@ -13,12 +13,12 @@
 
 // The read path (byte-for-byte what the browser `wasm` surface uses): the pure,
 // blst-free primitives from the format core.
+use dig_capsule::capsule::SecretSalt;
 use dig_capsule::crypto::primitives::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
 use dig_capsule::format::codec::{Decode, Encode};
 use dig_capsule::format::Bytes32;
-use dig_capsule::capsule::SecretSalt;
 use dig_capsule::merkle::{resource_leaf, MerkleProof, MerkleTree, ProofStep};
-use dig_capsule::urn::{Bytes32 as UrnBytes32, DigUrn};
+use dig_capsule::urn::{DigUrn, UrnBytes32};
 
 fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
     DigUrn {

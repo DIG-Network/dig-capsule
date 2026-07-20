@@ -1,0 +1,6 @@
+# wasm-pack build outputs + assembled npm package + smoke fixture (all regenerable).
+pkg/
+pkg-web/
+pkg-node/
+smoke_fixture.json
+node_modules/
