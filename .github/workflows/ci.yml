@@ -268,5 +268,11 @@ jobs:
         working-directory: wasm-npm
         run: node scripts/verify-pkg.mjs
 
+      # The cargo build flags (`--no-default-features --features wasm --test
+      # browser`) MUST precede `--`: wasm-pack forwards pre-`--` args to the
+      # cargo build, while args AFTER `--` reach only the test binary. Placing
+      # them after `--` left cargo on the `full` default features, dragging
+      # wasmtime/reqwest into the wasm32 graph (they have no wasm32 backend) and
+      # failing the compile before any test ran.
       - name: Real-browser test (headless Chrome)
-        run: wasm-pack test --headless --chrome --test browser -- --no-default-features --features wasm
+        run: wasm-pack test --headless --chrome --no-default-features --features wasm --test browser

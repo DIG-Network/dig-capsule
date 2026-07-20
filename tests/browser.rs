@@ -1,8 +1,9 @@
 //! Real-browser smoke test for the `wasm` read-crypto surface.
 //!
 //! Runs the compiled wasm-bindgen exports inside a headless browser
-//! (`wasm-pack test --headless --chrome <root> -- --no-default-features
-//! --features wasm --test browser`), proving the read-crypto contract the browser
+//! (`wasm-pack test --headless --chrome --no-default-features --features wasm
+//! --test browser`; the cargo flags precede `--` so they reach the build, not
+//! just the test binary), proving the read-crypto contract the browser
 //! consumers (the on.dig.net loader, hub.dig.net) depend on works in a genuine
 //! browser runtime -- not just natively. The Node CommonJS entry is covered
 //! separately by `wasm-npm/scripts/verify-pkg.mjs`, and the full proof-gated
