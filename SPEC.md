@@ -54,6 +54,27 @@ version.
   lookup + AES-seed key). The `.dig` format serializes NEITHER — a URN is never a
   section field, so consuming the canonical crate changes no format byte.
 
+### 1.1 Reading a capsule from module bytes (the `reader` feature)
+
+- `dig_capsule::capsule::Capsule::from_module_bytes(&[u8]) -> Result<Capsule,
+  dig_capsule::reader::ModuleReadError>` recovers the canonical
+  `(store_id, root_hash)` directly from a compiled `.dig` wasm module, WITHOUT the
+  wasmtime serve engine. It reads the embedded `StoreId` and `CurrentRoot` sections
+  from the DIGS data segment (§2) and is FAIL-CLOSED: it recomputes the merkle root
+  from the embedded `MerkleNodes` leaves and returns `RootMismatch` unless it equals
+  `CurrentRoot`, so a forged `CurrentRoot` cannot pass.
+- **`store_id` is NOT self-verifiable from the module bytes.** It is the store's
+  on-chain Chia launcher id, baked in at compile time; nothing in the bytes binds
+  them to that launcher. A caller that trusts the returned `store_id` MUST cross-check
+  it against a trusted anchor it already holds — the URN it resolved, the on-chain
+  singleton, or a `ChainState` it independently verified. The read proves the module
+  is a self-consistent build, NOT that `root_hash` is the publisher's latest
+  authorized root (the chain is the authority for that — §3, §4).
+- `ModuleReadError` is a catalogued enum (`BadWasm`, `NoDataSection`, `BadBlob`,
+  `MissingSection(SectionId)`, `BadSectionLen`, `RootMismatch`); the reader never
+  panics on adversarial input. The `reader` feature pulls ONLY `wasmparser` above the
+  `no_std` core; `compile` implies it (the DIGS-blob extraction is shared, §4).
+
 ## 2. The DIGS data section
 
 - Magic `DIGS` (4 bytes), then a `u8` `format_version` = **1**, then an offset
