@@ -46,7 +46,7 @@ pub fn signing_message(proof: &[u8], public_input: &[u8]) -> Vec<u8> {
     msg
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::imp::core::Bytes32;

@@ -38,7 +38,7 @@ pub fn find_boundary(data: &[u8], start: usize, cfg: &ChunkerConfig) -> usize {
     max_end
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::imp::core::ChunkerConfig;

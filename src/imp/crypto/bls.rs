@@ -385,7 +385,7 @@ pub fn verify_tombstone(pk: &PublicKey, t: &Tombstone, sig: &Bytes96) -> bool {
     pk.verify(&tombstone_signing_message(t), &sig)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod request_auth_tests {
     use super::*;
 

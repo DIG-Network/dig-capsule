@@ -32,5 +32,5 @@ pub use mock_chain::MockChainSource;
 pub use prover::{bound_public_output, Prover, Verifier};
 pub use serving_inputs::ServingInputs;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

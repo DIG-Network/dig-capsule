@@ -75,5 +75,5 @@ pub const CRYPTO_VERSION: u32 = 1;
 /// the guest (they all reference the one core constant).
 pub use crate::imp::core::CHIA_BLS_SCHEME;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

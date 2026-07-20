@@ -186,7 +186,7 @@ unsafe impl GlobalAlloc for BumpAllocator {
 #[global_allocator]
 static ALLOC: BumpAllocator = BumpAllocator::new();
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use core::alloc::Layout;

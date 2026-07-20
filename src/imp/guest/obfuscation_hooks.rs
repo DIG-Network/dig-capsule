@@ -19,7 +19,7 @@ pub fn obfuscation_anchor() {
     core::hint::black_box(0u32);
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

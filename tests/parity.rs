@@ -11,6 +11,10 @@
 //! features, linking the blst-backed native `crypto` to prove the host re-export
 //! path agrees with the read-path core byte-for-byte.
 
+// Native §7 byte-parity gate: needs the `crypto` facade (blst-backed) and native-only
+// primitives, so it compiles natively only -- never for the wasm32 browser test build.
+#![cfg(all(feature = "crypto", not(target_arch = "wasm32")))]
+
 // The read path (byte-for-byte what the browser `wasm` surface uses): the pure,
 // blst-free primitives from the format core.
 use dig_capsule::capsule::SecretSalt;

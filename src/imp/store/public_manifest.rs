@@ -160,7 +160,7 @@ fn global_chunk_index(generations_dir: &Path) -> Result<BTreeMap<String, PathBuf
     Ok(index)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use crate::imp::core::resource_leaf;

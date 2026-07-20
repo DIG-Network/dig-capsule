@@ -154,7 +154,7 @@ pub fn decoy_content_response(retrieval_key: &Bytes32, root: &Bytes32) -> Conten
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

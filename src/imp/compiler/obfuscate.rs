@@ -307,7 +307,7 @@ fn assemble(module_bytes: &[u8], code: CodeSection, bogus_type_index: u32) -> Re
     Ok(module.finish())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use wasmparser::{Validator, WasmFeatures};

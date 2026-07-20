@@ -29,5 +29,5 @@ pub use public_manifest::build_public_manifest;
 pub use staging::{StagedRecord, StagingArea};
 pub use store::Store;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

@@ -220,7 +220,7 @@ fn const_i32_offset(offset_expr: &wasmparser::ConstExpr) -> Result<i32> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use wasmparser::{Parser, Payload};

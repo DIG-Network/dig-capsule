@@ -64,5 +64,5 @@ pub use template::{
 // Re-export the canonical core result/stats so consumers reference one home (C6).
 pub use crate::imp::core::{CompilationResult, CompilationStats};
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

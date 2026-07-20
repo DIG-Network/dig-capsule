@@ -29,5 +29,5 @@ pub use chunker::chunk_stream;
 pub use config::{default_config, mask_for_target};
 pub use gear::GEAR_TABLE;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

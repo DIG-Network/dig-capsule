@@ -47,7 +47,7 @@ pub(crate) fn gear_roll(hash: u64, byte: u8) -> u64 {
     (hash << 1).wrapping_add(GEAR_TABLE[byte as usize])
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

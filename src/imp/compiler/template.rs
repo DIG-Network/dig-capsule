@@ -207,7 +207,7 @@ pub fn assert_host_imports(module: &[u8]) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

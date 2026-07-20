@@ -647,7 +647,7 @@ pub fn manifest_from_json(v: &serde_json::Value) -> MetadataManifest {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use tempfile::tempdir;

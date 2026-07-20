@@ -27,7 +27,7 @@ pub enum CompilerError {
 /// Crate result alias.
 pub type Result<T> = core::result::Result<T, CompilerError>;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 

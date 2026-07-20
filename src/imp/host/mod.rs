@@ -30,5 +30,5 @@ pub use session::{Session, SessionTable};
 pub use state::{HostKeys, HostState, ReturnBuffer};
 pub use teehook::{AttestationBackend, BlsAttestationBackend, SharedBackend};
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests;

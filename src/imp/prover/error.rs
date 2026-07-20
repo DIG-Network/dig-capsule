@@ -46,7 +46,7 @@ pub enum ProverError {
 /// Crate-wide result alias.
 pub type Result<T> = core::result::Result<T, ProverError>;
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
 
