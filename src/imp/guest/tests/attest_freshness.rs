@@ -12,7 +12,6 @@
 //! a Decoy, while a fresh one releases content. This proves the gate does NOT
 //! short-circuit freshness by comparing the timestamp against itself.
 
-mod fixtures;
 
 use crate::imp::core::{Bytes32, KeyTableEntry};
 use crate::imp::guest::content::{serve_content, ContentOutcome, GateConfig};
@@ -127,7 +126,7 @@ fn one_entry_fixture(host: &ClockJumpHost) -> (DataSection<'static>, ContentRequ
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
     let blob = section_with_trusted(&table, &pool, &[host.pubkey]);
     let blob: &'static [u8] = Box::leak(blob.into_boxed_slice());
     let ds = DataSection::parse(blob).unwrap();

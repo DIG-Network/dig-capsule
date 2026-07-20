@@ -139,7 +139,7 @@ fn content_request(retrieval_key: Bytes32) -> Vec<u8> {
 }
 
 fn read_guest_wasm() -> Vec<u8> {
-    match std::fs::read(GUEST_WASM) {
+    match Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec()) {
         Ok(b) => b,
         Err(e) => panic!(
             "guest wasm missing at {GUEST_WASM}: {e}. Build it first: \

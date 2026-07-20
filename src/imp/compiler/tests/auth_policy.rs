@@ -53,7 +53,7 @@ fn host_deps(store_id: Bytes32) -> HostDeps {
 /// Compile a real module embedding `auth`, then read back the guest's
 /// `get_authentication_info` and decode it as the canonical `AuthenticationInfo`.
 fn compile_and_read_auth(tag: &str, auth: AuthenticationInfo) -> AuthenticationInfo {
-    let guest = std::fs::read(GUEST_WASM).expect(
+    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec()).expect(
         "guest wasm must be built: \
          cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release",
     );

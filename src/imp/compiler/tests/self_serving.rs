@@ -144,7 +144,7 @@ fn content_request(retrieval_key: Bytes32) -> Vec<u8> {
 
 #[test]
 fn real_compiled_module_serves_itself_with_verifying_proof() {
-    let guest = match std::fs::read(GUEST_WASM) {
+    let guest = match Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec()) {
         Ok(b) => b,
         Err(e) => panic!(
             "guest wasm missing at {GUEST_WASM}: {e}. Build it first: \
@@ -276,7 +276,7 @@ fn real_compiled_module_serves_itself_with_verifying_proof() {
 
 #[test]
 fn real_compiled_module_miss_returns_decoy_failing_the_client_proof_gate() {
-    let guest = std::fs::read(GUEST_WASM)
+    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec())
         .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
 
     let store_id = Bytes32([0x7Au8; 32]);
@@ -371,7 +371,7 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
     // fixture twice — once with obfuscation OFF, once ON — instantiate BOTH via
     // HostRuntime, call serve_content for the same retrieval key, and assert the
     // served bytes (ContentResponse wire bytes) are BYTE-IDENTICAL.
-    let guest = std::fs::read(GUEST_WASM)
+    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec())
         .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
 
     let store_id = Bytes32([0x7Au8; 32]);
@@ -467,7 +467,7 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
 fn obfuscated_real_module_still_serves_itself_with_verifying_proof() {
     // §17.1: obfuscation is behavior-preserving. An OBFUSCATED real module must
     // still serve itself, with the merkle proof verifying against the same root.
-    let guest = std::fs::read(GUEST_WASM)
+    let guest = Ok::<Vec<u8>, std::io::Error>(crate::imp::stage::embedded_guest_wasm().to_vec())
         .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
 
     let store_id = Bytes32([0x7Au8; 32]);

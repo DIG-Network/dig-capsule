@@ -6,7 +6,6 @@
 //! `verify_attestation` (and therefore the gate) accepts ONLY a host signature
 //! over that exact challenge.
 
-mod fixtures;
 
 use crate::imp::core::{Bytes32, KeyTableEntry};
 use crate::imp::guest::attestation::build_challenge;
@@ -132,7 +131,7 @@ fn one_entry_fixture(
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
     let blob = section_with_trusted(&table, &pool, &[host.pubkey]);
     let blob: &'static [u8] = Box::leak(blob.into_boxed_slice());
     let ds = DataSection::parse(blob).unwrap();

@@ -23,13 +23,11 @@ fn emitted_proof_verifies_against_core() {
     );
 }
 
-mod fixtures;
-mod mock_host;
 use crate::imp::core::{ContentResponse, KeyTableEntry};
 use crate::imp::guest::content::{serve_content, ContentOutcome, GateConfig};
 use crate::imp::guest::datasection::{encode_key_table, DataSection, SectionId};
 use crate::imp::guest::request::{ContentRequest, ValidityWindow};
-use mock_host::MockHost;
+use super::mock_host::MockHost;
 
 fn gate_config() -> GateConfig {
     GateConfig {
@@ -47,8 +45,8 @@ fn from_embedded_does_not_require_host_attestation() {
     // on the serving host's BLS key — otherwise anonymous nodes serve only decoys, and each
     // node would have to re-key the module (changing the anchored program hash). Regression guard.
     let table = encode_key_table(&[]);
-    let pool = fixtures::pack_pool(&[]);
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
+    let pool = super::fixtures::pack_pool(&[]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
     let ds = DataSection::parse(&blob).unwrap();
     assert!(
         !GateConfig::from_embedded(&ds).require_attestation,
@@ -67,8 +65,8 @@ fn hit_returns_real_content_response() {
     };
     let table = encode_key_table(&[entry]);
     // Pool stores 4 chunk ciphertexts of fixed 5 bytes each in section ChunkPool.
-    let pool = fixtures::pack_pool(&[b"alpha", b"beta_", b"gamma", b"delta"]);
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
+    let pool = super::fixtures::pack_pool(&[b"alpha", b"beta_", b"gamma", b"delta"]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
     let ds = DataSection::parse(&blob).unwrap();
 
     let host = MockHost::default();
@@ -92,7 +90,7 @@ fn hit_returns_real_content_response() {
 #[test]
 fn miss_returns_decoy() {
     let table = encode_key_table(&[]); // empty table => every key misses
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &[]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &[]);
     let ds = DataSection::parse(&blob).unwrap();
     let host = MockHost::default();
     let req = ContentRequest {
@@ -118,8 +116,8 @@ fn outside_temporal_window_returns_decoy_even_on_hit() {
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
     let ds = DataSection::parse(&blob).unwrap();
     let host = MockHost {
         time: 50, // before window
@@ -245,7 +243,7 @@ fn attest_fixture(corrupt: bool, trusted_includes_signer: bool) -> ContentOutcom
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
 
     let mut host = SigningHost::new(&[42u8; 32]);
     host.corrupt_sig = corrupt;
@@ -305,9 +303,9 @@ fn attestation_with_no_embedded_trusted_set_returns_decoy() {
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
     // Build a blob WITHOUT a TrustedKeys (id 5) section.
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
     let ds = DataSection::parse(&blob).unwrap();
     assert!(
         ds.section(SectionId::TrustedKeys).is_none(),
@@ -353,8 +351,8 @@ fn failed_attestation_returns_decoy() {
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
     let ds = DataSection::parse(&blob).unwrap();
     let host = MockHost {
         attestation: Err(crate::imp::core::ErrorCode::AttestationFailed),
@@ -390,8 +388,8 @@ fn proof_hit_returns_prelude_binding_output_and_nonce() {
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &pool);
     let ds = DataSection::parse(&blob).unwrap();
     let host = MockHost::default();
     let req = ProofRequest {
@@ -438,7 +436,7 @@ fn proof_hit_returns_prelude_binding_output_and_nonce() {
 #[test]
 fn proof_miss_returns_decoy() {
     let table = encode_key_table(&[]);
-    let blob = fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &[]);
+    let blob = super::fixtures::section_keytable_and_pool([0xAA; 32], [0xBB; 32], &table, &[]);
     let ds = DataSection::parse(&blob).unwrap();
     let host = MockHost::default();
     let req = ProofRequest {
@@ -596,7 +594,7 @@ fn jwt_gate_outcome(
         total_size: 5,
     };
     let table = encode_key_table(&[entry]);
-    let pool = fixtures::pack_pool(&[b"alpha"]);
+    let pool = super::fixtures::pack_pool(&[b"alpha"]);
     let blob = section_with_authinfo([0xAA; 32], [0xBB; 32], &table, &pool, jwks_url);
     let ds = DataSection::parse(&blob).unwrap();
     let mut gc = gate_config();

@@ -90,7 +90,13 @@
 //! use dig_capsule::compile::Compiler;
 //! ```
 
-#![cfg_attr(not(feature = "std"), no_std)]
+// no_std applies to the wasm32 no-`std`-feature build (the guest-wasm cdylib + any
+// wasm consumer). On a native host the `cdylib` crate-type needs a panic handler and
+// the release profile unwinds (neither is available in native no_std), so the crate
+// stays `std`-the-language there even when the `std` FEATURE is off — the base is
+// still no_std-CLEAN (its code uses only `core`/`alloc`), proven by the wasm32 guest
+// build. Feature gates (`#[cfg(feature = "std")]`) are unaffected by this.
+#![cfg_attr(all(target_arch = "wasm32", not(feature = "std")), no_std)]
 
 extern crate alloc;
 

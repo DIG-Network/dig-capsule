@@ -1,37 +1,13 @@
-//! Builds the guest to wasm32 and asserts the module validates and exports the
-//! full ABI. Uses wasmparser to validate and to enumerate exports.
-
-use std::path::PathBuf;
-use std::process::Command;
-
-/// Workspace root = parent of `crates/`. CARGO_MANIFEST_DIR points at the crate
-/// dir (`<root>/crates/dig-capsule-guest`); go up two levels to reach `<root>`.
-fn workspace_root() -> PathBuf {
-    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    crate_dir
-        .parent()
-        .and_then(|p| p.parent())
-        .expect("workspace root")
-        .to_path_buf()
-}
+//! Asserts the compiled guest wasm module validates and exports the full ABI.
+//! Uses wasmparser to validate and to enumerate exports/imports.
+//!
+//! The bytes under test are the REAL guest wasm embedded at build time
+//! (`crate::imp::stage::embedded_guest_wasm()`, produced by
+//! `cargo build --no-default-features --features guest-wasm
+//!  --target wasm32-unknown-unknown --release`) — hermetic, no runtime cargo build.
 
 fn build_wasm() -> Vec<u8> {
-    let root = workspace_root();
-    let status = Command::new("cargo")
-        .current_dir(&root)
-        .args([
-            "build",
-            "-p",
-            "dig-capsule-guest",
-            "--target",
-            "wasm32-unknown-unknown",
-            "--release",
-        ])
-        .status()
-        .expect("cargo build wasm32");
-    assert!(status.success(), "wasm build must succeed");
-    let path = root.join("target/wasm32-unknown-unknown/release/dig_capsule_guest.wasm");
-    std::fs::read(&path).unwrap_or_else(|e| panic!("read built wasm module {path:?}: {e}"))
+    crate::imp::stage::embedded_guest_wasm().to_vec()
 }
 
 #[test]

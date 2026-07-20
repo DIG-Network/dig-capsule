@@ -1,7 +1,6 @@
-mod mock_host;
 use crate::imp::core::ErrorCode;
 use crate::imp::guest::session::{ensure_session, gated_jwks_fetch};
-use mock_host::MockHost;
+use super::mock_host::MockHost;
 
 #[test]
 fn jwks_fetch_blocked_without_session() {

@@ -47,7 +47,7 @@ mod tests {
 
     fn fixture() -> (Store<()>, Memory) {
         let engine = Engine::default();
-        let wat = include_str!("../tests/fixtures/wat/echo.wat");
+        let wat = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/wat/echo.wat"));
         let bytes = wat::parse_str(wat).unwrap();
         let module = Module::new(&engine, &bytes).unwrap();
         let mut store = Store::new(&engine, ());
