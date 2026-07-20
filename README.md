@@ -4,7 +4,7 @@ The **DIG capsule data plane** — the `.dig` / DIGS format, the compiler that b
 a capsule from files, the capsule read-crypto, staging, the guest/host serve triad,
 and the capsule size ladder. A capsule is the DATA portion of a store; the on-chain
 anchor (singleton, storeId, generations) lives in
-[`dig-store`](https://github.com/DIG-Network/dig-store), which depends on this crate.
+[`dig-store`](https://github.com/DIG-Network/digs), which depends on this crate.
 
 Lifted from `dig-store` (epic #744). The crate names (`dig-capsule-core`, …) are
 preserved verbatim so consumers change only the git URL, not their `use` paths.
