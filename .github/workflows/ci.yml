@@ -255,7 +255,7 @@ jobs:
       # §7 byte-parity gate: the native parity + public-manifest tests prove the
       # wasm read-crypto exports match the host crypto byte-for-byte.
       - name: Parity tests (native, wasm surface; flaky-aware)
-        run: cargo nextest run --features wasm --retries 2
+        run: cargo nextest run --no-default-features --features crypto,wasm --retries 2
 
       - name: Build + assemble the dual-target package (web + node -> pkg/)
         working-directory: wasm-npm
