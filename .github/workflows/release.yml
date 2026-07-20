@@ -85,17 +85,16 @@ jobs:
           git push origin "${{ steps.ver.outputs.tag }}"
           echo "Pushed changelog commit + ${{ steps.ver.outputs.tag }} — deploy-on-tag will fire."
 
-  # Publish the workspace's member crates to crates.io in TOPOLOGICAL (bottom-up)
-  # order — a crate cannot publish before its dependencies are indexed. Runs after
-  # the changelog+tag job (so the release commit is the one published), and on a
-  # manual dispatch (first-publish kick). Idempotent: a crate whose version is
-  # already on crates.io is skipped, so a re-run after a partial failure resumes.
+  # Publish the single `dig-capsule` crate to crates.io. Runs after the changelog+tag
+  # job (so the release commit is the one published), and on a manual dispatch
+  # (first-publish kick). Idempotent: a no-op if the crate's version is already on
+  # crates.io, so a re-run after a partial failure is safe.
   #
-  # `--no-verify` skips cargo's redundant isolated verify build: the full workspace
-  # is already built + tested on every PR by ci.yml (the real gate), and an isolated
-  # verify would need the guest wasm embedded by dig-capsule-stage's build.rs and the
-  # RISC0 toolchain for the guest — neither of which the publish runner has. crates.io
-  # still validates that every dependency exists at publish time, so ORDER is enforced.
+  # `--no-verify` skips cargo's redundant isolated verify build: the whole crate is
+  # already built + tested on every PR by ci.yml (the real gate), and an isolated
+  # verify would need the guest wasm embedded by build.rs and the RISC0 toolchain for
+  # the nested guest — neither of which the publish runner has. crates.io still
+  # validates that every dependency exists at publish time.
   publish-crates:
     name: Publish crates to crates.io
     needs: release
@@ -111,34 +110,12 @@ jobs:
       - name: Install pinned Rust toolchain
         run: rustup show
 
-      - name: Publish members bottom-up (idempotent, waits for indexing)
+      - name: Publish dig-capsule (idempotent, waits for indexing)
         shell: bash
         run: |
           set -euo pipefail
 
-          # crate name -> manifest path. `dig-capsule-guest-risc0` is the excluded
-          # RISC0 guest (an optional dep of dig-capsule-prover), published before it
-          # so crates.io can resolve the optional dependency.
-          declare -a ORDER=(
-            "dig-capsule-core:crates/dig-capsule-core/Cargo.toml"
-            "dig-capsule-chunker:crates/dig-capsule-chunker/Cargo.toml"
-            "dig-capsule-crypto:crates/dig-capsule-crypto/Cargo.toml"
-            "dig-capsule-guest:crates/dig-capsule-guest/Cargo.toml"
-            "dig-capsule-guest-risc0:crates/dig-capsule-prover/guest/Cargo.toml"
-            "dig-capsule-store:crates/dig-capsule-store/Cargo.toml"
-            "dig-capsule-prover:crates/dig-capsule-prover/Cargo.toml"
-            "dig-capsule-host:crates/dig-capsule-host/Cargo.toml"
-            "dig-capsule-compiler:crates/dig-capsule-compiler/Cargo.toml"
-            "dig-capsule-stage:crates/dig-capsule-stage/Cargo.toml"
-            # The top `dig-capsule` FACADE crate publishes LAST — after every member
-            # dep it re-exports is indexed. Its version is the ROOT package.version
-            # (0.3.0), decoupled from the members (0.2.2).
-            "dig-capsule:Cargo.toml"
-          )
-
-          crate_version() {
-            python3 -c 'import sys,tomllib; d=tomllib.load(open(sys.argv[1],"rb")); p=d.get("package",{}); v=p.get("version"); v=(tomllib.load(open("Cargo.toml","rb"))["workspace"]["package"]["version"] if (isinstance(v,dict) or v is None) else v); print(v)' "$1"
-          }
+          VER="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml","rb"))["package"]["version"])')"
 
           already_published() { # name version -> 0 if present on crates.io
             local n="$1" v="$2"
@@ -156,15 +133,11 @@ jobs:
             echo "::error::timed out after 30 min waiting for $n $v to index on crates.io"; return 1
           }
 
-          for entry in "${ORDER[@]}"; do
-            name="${entry%%:*}"; manifest="${entry#*:}"
-            ver="$(crate_version "$manifest")"
-            if already_published "$name" "$ver"; then
-              echo "SKIP $name $ver (already on crates.io)"
-              continue
-            fi
-            echo "PUBLISH $name $ver"
-            cargo publish --manifest-path "$manifest" --no-verify
-            wait_indexed "$name" "$ver"
-          done
-          echo "All member crates published."
+          if already_published "dig-capsule" "$VER"; then
+            echo "SKIP dig-capsule $VER (already on crates.io)"
+            exit 0
+          fi
+          echo "PUBLISH dig-capsule $VER"
+          cargo publish --no-verify
+          wait_indexed "dig-capsule" "$VER"
+          echo "Published dig-capsule $VER."
