@@ -7,7 +7,7 @@
 # the guest ABI, and `COMPILER_VERSION` are UNCHANGED — a pure mechanical collapse.
 [package]
 name = "dig-capsule"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 license = "GPL-2.0-only"
 repository = "https://github.com/DIG-Network/dig-capsule"
@@ -68,11 +68,21 @@ serde = ["dep:serde"]
 
 crypto = ["std", "dep:chia-bls", "dep:thiserror"]
 store = ["std", "crypto", "dep:toml", "dep:thiserror"]
+
+# The lightweight, wasmtime-free capsule READER: recover the canonical
+# `Capsule { store_id, root_hash }` from compiled `.dig` module bytes
+# (`Capsule::from_module_bytes`). Pulls ONLY wasmparser (+ the always-on no_std
+# core) — NO wasmtime, NO chia-bls, NO wat, NO store. `compile` implies it so
+# the extraction path is shared (never duplicated) and existing consumers are
+# unaffected. Isolation is CI-asserted: a `--no-default-features --features
+# reader` build must NOT pull wasmtime.
+reader = ["std", "dep:wasmparser"]
+
 compile = [
   "store",
   "crypto",
+  "reader",
   "dep:wasm-encoder",
-  "dep:wasmparser",
   "dep:chacha20",
   "dep:wat",
 ]

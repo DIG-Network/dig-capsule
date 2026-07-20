@@ -27,7 +27,10 @@ implementation detail — consumers use only the top-level concept modules
 `default = full` (`crypto`+`store`+`compile`+`serve`); `std` lifts the crate out of
 `no_std` and enables the canonical `urn` scheme + `chunk::chunk_stream` (both require
 `std`); `wasm` is the browser/Node read-crypto surface; `guest-wasm` compiles the
-self-serving guest cdylib to wasm32; `risc0` builds the real serving-proof circuit.
+self-serving guest cdylib to wasm32; `risc0` builds the real serving-proof circuit;
+`reader` is the lightweight, wasmtime-free capsule reader (§1.1) — it pulls ONLY
+`wasmparser` above the `no_std` core (NO wasmtime/chia-bls/store), and `compile`
+implies it so the DIGS-blob extraction path is shared, never duplicated.
 The base (no default features) is a `no_std`+`alloc` core with NO `blst`/`getrandom`.
 The collapse changes no bytes — the normative contract below and the golden fixtures
 read identically. `COMPILER_VERSION` is the literal `1.0.0`, DECOUPLED from the crate
@@ -50,6 +53,27 @@ version.
   `content_key = SHA-256(canonical_rootless())` (the root-INDEPENDENT per-resource
   lookup + AES-seed key). The `.dig` format serializes NEITHER — a URN is never a
   section field, so consuming the canonical crate changes no format byte.
+
+### 1.1 Reading a capsule from module bytes (the `reader` feature)
+
+- `dig_capsule::capsule::Capsule::from_module_bytes(&[u8]) -> Result<Capsule,
+  dig_capsule::reader::ModuleReadError>` recovers the canonical
+  `(store_id, root_hash)` directly from a compiled `.dig` wasm module, WITHOUT the
+  wasmtime serve engine. It reads the embedded `StoreId` and `CurrentRoot` sections
+  from the DIGS data segment (§2) and is FAIL-CLOSED: it recomputes the merkle root
+  from the embedded `MerkleNodes` leaves and returns `RootMismatch` unless it equals
+  `CurrentRoot`, so a forged `CurrentRoot` cannot pass.
+- **`store_id` is NOT self-verifiable from the module bytes.** It is the store's
+  on-chain Chia launcher id, baked in at compile time; nothing in the bytes binds
+  them to that launcher. A caller that trusts the returned `store_id` MUST cross-check
+  it against a trusted anchor it already holds — the URN it resolved, the on-chain
+  singleton, or a `ChainState` it independently verified. The read proves the module
+  is a self-consistent build, NOT that `root_hash` is the publisher's latest
+  authorized root (the chain is the authority for that — §3, §4).
+- `ModuleReadError` is a catalogued enum (`BadWasm`, `NoDataSection`, `BadBlob`,
+  `MissingSection(SectionId)`, `BadSectionLen`, `RootMismatch`); the reader never
+  panics on adversarial input. The `reader` feature pulls ONLY `wasmparser` above the
+  `no_std` core; `compile` implies it (the DIGS-blob extraction is shared, §4).
 
 ## 2. The DIGS data section
 

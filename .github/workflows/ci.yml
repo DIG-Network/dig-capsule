@@ -102,6 +102,23 @@ jobs:
       - name: Doctests
         run: cargo test --doc
 
+      # The lightweight `reader` feature MUST stay wasmtime-free: the slim
+      # `Capsule::from_module_bytes` path pulls ONLY wasmparser (+ no_std core).
+      # Assert both that it compiles standalone AND that wasmtime never enters
+      # its dependency graph — a regression here would silently re-bloat every
+      # slim consumer (URN resolver / node RPC / descriptor check).
+      - name: Reader feature isolation (compiles + no wasmtime)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          cargo build --no-default-features --features reader
+          if cargo tree --no-default-features --features reader \
+               -i wasmtime >/dev/null 2>&1; then
+            echo "::error::wasmtime leaked into the reader feature graph"
+            exit 1
+          fi
+          echo "OK: reader graph is wasmtime-free"
+
   coverage:
     name: Coverage (>=80% lines, gated)
     runs-on: ubuntu-latest
