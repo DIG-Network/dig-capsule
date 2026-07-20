@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 This project adheres to [Semantic Versioning](https://semver.org) and
 [Conventional Commits](https://www.conventionalcommits.org).
 
+## [0.4.0] - 2026-07-20
+
+### Refactor
+- Collapse dig-capsule workspace into one crates.io crate (#1270) (#11)
+
 ## [0.3.0] - 2026-07-20
 
 ### Features
