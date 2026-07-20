@@ -1,7 +1,9 @@
 # Runbook — dig-capsule (build, test, publish)
 
-The `.dig` capsule data plane: a Cargo workspace (9 crates) plus the
-`@dignetwork/dig-capsule-wasm` wasm npm package (built from `crates/dig-capsule-wasm`).
+The `.dig` capsule data plane: a Cargo workspace of 9 members plus the top
+**`dig-capsule` facade** (the root package — the curated public API consumers depend
+on), plus the `@dignetwork/dig-capsule-wasm` wasm npm package (built from
+`crates/dig-capsule-wasm`).
 
 ## Prerequisites
 
@@ -56,11 +58,15 @@ conditional exports, with one shared `dig_client_bg.wasm` and an SRI anchor.
 ## Release + publish (orchestrator)
 
 - On merge to `main`, `.github/workflows/release.yml` regenerates the changelog,
-  commits it (RELEASE_TOKEN past branch protection), and pushes the `vX.Y.Z` tag
-  from the workspace `Cargo.toml` version.
+  commits it (RELEASE_TOKEN past branch protection), and pushes the `vX.Y.Z` tag. The
+  version is read from the ROOT `Cargo.toml` `package.version` (the facade — **0.3.0**);
+  the members stay **0.2.2** (compiler **1.0.0**), so the release tags `v0.3.0`.
 - The published GitHub Release fires `.github/workflows/publish-npm.yml`, which
   rebuilds + publishes `@dignetwork/dig-capsule-wasm` to npm (org `NPM_TOKEN`).
-- The Rust crates are consumed by a git-tag pin (crates.io publish is a later goal).
+- `release.yml` then publishes every crate to **crates.io** in topological (bottom-up)
+  order — the members first (each at 0.2.2), the top `dig-capsule` facade LAST (0.3.0),
+  after all its member deps are indexed. crates.io publish IS the distribution model;
+  consumers depend on just `dig-capsule` from crates.io (never a `git = …` dep).
 
 ## Disk hygiene
 

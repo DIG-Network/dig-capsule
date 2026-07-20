@@ -15,6 +15,16 @@ minting, generations/anti-rollback), the §21 remote, and the CLI live in
 This workspace was lifted verbatim from `dig-store` (epic #744 Phase 1); the crate
 names (`dig-capsule-core`, …) are preserved so consumers change only the git URL.
 
+## 0. The public entry point (the `dig-capsule` facade)
+
+The top-level **`dig-capsule`** crate is the curated public entry point to this data
+plane: it re-exports the member crates' surface, organized by concept
+(`capsule`/`urn`/`format`/`merkle`/`chunk`/`metadata` base; `crypto`/`store`/`compile`/
+`stage`/`host`/`prover`/`guest` behind feature flags). Consumers depend on JUST
+`dig-capsule` and use its facade; the `dig-capsule-*` members are an implementation
+detail. The facade adds no format logic and changes no bytes — it re-exports only, so
+the normative contract below is unchanged and the golden fixtures read identically.
+
 ## 1. Capsule identity
 
 - A **capsule** is one immutable store generation: the pair `(store_id, root_hash)`,
@@ -23,9 +33,15 @@ names (`dig-capsule-core`, …) are preserved so consumers change only the git U
   (`dig_capsule_core::Capsule::{canonical, from_canonical}`). A store is a sequence
   of capsules identified by `store_id`; each capsule is one on-chain-anchored root.
 - The content URN is `urn:dig:chia:<store_id>[/<resource_key>]` (root-independent)
-  or the display form `urn:dig:chia:<store_id>:<root>/<resource_key>`
-  (`dig_capsule_core::urn`). The `retrieval_key` is derived from the canonical URN and
-  is the stable per-resource lookup key; this derivation is FROZEN.
+  or the display form `urn:dig:chia:<store_id>:<root>/<resource_key>`. The canonical
+  `urn:dig:` scheme, its byte-level grammar, and the key derivation are OWNED by the
+  **`dig-urn-protocol`** crate (the single ecosystem source of truth); `dig-capsule`
+  CONSUMES it and re-exports `DigUrn` through the facade `urn` module. Two keys derive
+  from a URN, both FROZEN: `retrieval_key = SHA-256(canonical())` (the URN-identity key
+  that PINS the root, fixed by the frozen conformance corpus) and
+  `content_key = SHA-256(canonical_rootless())` (the root-INDEPENDENT per-resource
+  lookup + AES-seed key). The `.dig` format serializes NEITHER — a URN is never a
+  section field, so consuming the canonical crate changes no format byte.
 
 ## 2. The DIGS data section
 

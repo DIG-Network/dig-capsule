@@ -2,7 +2,6 @@ use dig_capsule_core::codec::section::{SectionEntry, SectionHeader, FORMAT_VERSI
 use dig_capsule_core::codec::{Decode, Encode};
 use dig_capsule_core::keytable::{KeyTableEntry, PathWalk};
 use dig_capsule_core::merkle::{MerkleProof, ProofStep};
-use dig_capsule_core::urn::Urn;
 use dig_capsule_core::wire::{
     AttestationChallenge, AttestationResponse, AuthenticationInfo, ChiaBlockRef, ContentResponse,
     ExecutionProof, ProofResponse,
@@ -17,12 +16,8 @@ fn assert_roundtrip<T: Encode + Decode + PartialEq + core::fmt::Debug>(value: T)
 
 #[test]
 fn all_structs_roundtrip() {
-    assert_roundtrip(Urn {
-        chain: "mainnet".into(),
-        store_id: Bytes32([1; 32]),
-        root_hash: Some(Bytes32([2; 32])),
-        resource_key: Some("a/b".into()),
-    });
+    // NOTE: the URN is no longer a core codec type (it lives in `dig-urn-protocol`
+    // and is never serialized into a `.dig` section), so it is not exercised here.
     assert_roundtrip(SectionHeader {
         format_version: FORMAT_VERSION,
         entries: vec![SectionEntry {

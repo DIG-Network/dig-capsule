@@ -19,7 +19,25 @@ use dig_capsule_compiler::{Compiler, CompilerConfig, GenerationView, ResourceVie
 use dig_capsule_core::config::HostImportsConfig;
 use dig_capsule_core::merkle::MerkleTree;
 use dig_capsule_core::serving::concat_output;
-use dig_capsule_core::{Bytes32, Bytes48, ChiaBlockRef, ContentResponse, Decode, Decoder, Urn};
+use dig_capsule_core::{Bytes32, Bytes48, ChiaBlockRef, ContentResponse, Decode, Decoder};
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
+
+/// The canonical root-INDEPENDENT resource URN (via the canonical `dig-urn-protocol`
+/// crate). `store_id` is a `dig_capsule_core::Bytes32` bridged to the URN byte type.
+fn rootless_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
+    DigUrn {
+        chain: "chia".to_string(),
+        store_id: UrnBytes32(store_id.0),
+        root_hash: None,
+        resource_key: Some(resource_key.to_string()),
+    }
+}
+
+/// The rootless retrieval key as a `dig_capsule_core::Bytes32` (the type the fixtures
+/// use). Byte-identical to the former `Urn::retrieval_key()`.
+fn retrieval_key_of(urn: &DigUrn) -> Bytes32 {
+    Bytes32(urn.retrieval_key().0)
+}
 use dig_capsule_crypto::bls::BlsSecretKey;
 use dig_capsule_crypto::{derive_decryption_key, encrypt_chunk};
 use dig_capsule_host::{ExecutionLimits, FixedClock, HostDeps, HostRuntime};
@@ -137,15 +155,9 @@ fn real_compiled_module_serves_itself_with_verifying_proof() {
 
     // ---- Build a tiny fixture: one private store, one resource (index.html) ----
     let store_id = Bytes32([0x7Au8; 32]);
-    let chain = "chia";
-    let urn = Urn {
-        chain: chain.to_string(),
-        store_id,
-        root_hash: None,
-        resource_key: Some("index.html".to_string()),
-    };
+    let urn = rootless_urn(store_id, "index.html");
     let canonical = urn.canonical();
-    let retrieval_key = urn.retrieval_key(); // SHA-256(canonical URN)
+    let retrieval_key = retrieval_key_of(&urn); // SHA-256(canonical URN)
 
     // Client-derivable AES key (public store: no salt). The module never holds it.
     let key = derive_decryption_key(&canonical, None);
@@ -269,12 +281,7 @@ fn real_compiled_module_miss_returns_decoy_failing_the_client_proof_gate() {
         .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
 
     let store_id = Bytes32([0x7Au8; 32]);
-    let urn = Urn {
-        chain: "chia".to_string(),
-        store_id,
-        root_hash: None,
-        resource_key: Some("index.html".to_string()),
-    };
+    let urn = rootless_urn(store_id, "index.html");
     let canonical = urn.canonical();
     let key = derive_decryption_key(&canonical, None);
     let ct_a = encrypt_chunk(&key, b"only resource chunk A");
@@ -282,7 +289,7 @@ fn real_compiled_module_miss_returns_decoy_failing_the_client_proof_gate() {
     let real_ciphertext = concat_output(&[&ct_a, &ct_b]);
 
     let resource = FixtureResource {
-        retrieval_key: urn.retrieval_key(),
+        retrieval_key: retrieval_key_of(&urn),
         chunks: vec![(sha256(&ct_a), ct_a.clone()), (sha256(&ct_b), ct_b.clone())],
     };
     let gens = vec![FixtureGen {
@@ -348,7 +355,7 @@ fn real_compiled_module_miss_returns_decoy_failing_the_client_proof_gate() {
 
     // Sanity: the real resource still serves and verifies on this same module.
     let real = rt
-        .serve_content(&content_request(urn.retrieval_key()))
+        .serve_content(&content_request(retrieval_key_of(&urn)))
         .expect("serve real ok");
     let mut dec = Decoder::new(&real);
     let real_resp = ContentResponse::decode(&mut dec).expect("decodes");
@@ -369,12 +376,7 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
         .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
 
     let store_id = Bytes32([0x7Au8; 32]);
-    let urn = Urn {
-        chain: "chia".to_string(),
-        store_id,
-        root_hash: None,
-        resource_key: Some("index.html".to_string()),
-    };
+    let urn = rootless_urn(store_id, "index.html");
     let key = derive_decryption_key(&urn.canonical(), None);
     let ct_a = encrypt_chunk(&key, b"behavior-preservation chunk A 0123456789");
     let ct_b = encrypt_chunk(&key, b"behavior-preservation chunk B abcdefghij");
@@ -383,7 +385,7 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
         vec![FixtureGen {
             root: Bytes32([0x11u8; 32]),
             resources: vec![FixtureResource {
-                retrieval_key: urn.retrieval_key(),
+                retrieval_key: retrieval_key_of(&urn),
                 chunks: vec![(sha256(&ct_a), ct_a.clone()), (sha256(&ct_b), ct_b.clone())],
             }],
         }]
@@ -439,8 +441,8 @@ fn obfuscation_is_behavior_preserving_identical_served_bytes_on_and_off() {
     );
 
     // HIT: identical served bytes for the real resource.
-    let hit_plain = serve(&plain, urn.retrieval_key());
-    let hit_obf = serve(&obf, urn.retrieval_key());
+    let hit_plain = serve(&plain, retrieval_key_of(&urn));
+    let hit_obf = serve(&obf, retrieval_key_of(&urn));
     assert!(!hit_plain.is_empty(), "plain module must self-serve");
     assert_eq!(
         hit_plain, hit_obf,
@@ -470,19 +472,14 @@ fn obfuscated_real_module_still_serves_itself_with_verifying_proof() {
         .expect("guest wasm must be built (cargo build -p dig-capsule-guest --target wasm32-unknown-unknown --release)");
 
     let store_id = Bytes32([0x7Au8; 32]);
-    let urn = Urn {
-        chain: "chia".to_string(),
-        store_id,
-        root_hash: None,
-        resource_key: Some("index.html".to_string()),
-    };
+    let urn = rootless_urn(store_id, "index.html");
     let key = derive_decryption_key(&urn.canonical(), None);
     let ct = encrypt_chunk(&key, b"obfuscated yet self-serving");
     let real_ciphertext = concat_output(&[&ct]);
     let expected_root = MerkleTree::from_leaves(vec![sha256(&real_ciphertext)]).root();
 
     let resource = FixtureResource {
-        retrieval_key: urn.retrieval_key(),
+        retrieval_key: retrieval_key_of(&urn),
         chunks: vec![(sha256(&ct), ct.clone())],
     };
     let gens = vec![FixtureGen {
@@ -521,7 +518,7 @@ fn obfuscated_real_module_still_serves_itself_with_verifying_proof() {
     )
     .unwrap();
     let resp_bytes = rt
-        .serve_content(&content_request(urn.retrieval_key()))
+        .serve_content(&content_request(retrieval_key_of(&urn)))
         .expect("obfuscated module serves");
     assert!(
         !resp_bytes.is_empty(),

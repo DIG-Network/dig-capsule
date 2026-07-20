@@ -1,6 +1,9 @@
 [package]
 name = "dig-capsule-core"
-version.workspace = true
+# 0.3.0 (explicit, decoupled from the workspace 0.2.2): deleting the hand-rolled
+# `urn` / `urn_grammar` modules — the canonical URN now lives in `dig-urn-protocol`
+# — is a BREAKING public-API change, so this crate bumps ahead of the workspace.
+version = "0.3.0"
 edition.workspace = true
 license.workspace = true
 description = "Core read-crypto and format primitives for the DIG Network store (.dig) format: capsules, manifests, merkle proofs, URN grammar, and the AES-256-GCM-SIV chunk seal."
@@ -37,3 +40,7 @@ hkdf = { version = "0.12", default-features = false }
 [dev-dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
+# The URN conformance + capsule-bridge tests exercise the canonical `DigUrn` (the
+# hand-rolled `urn` module is gone). std-only, so it stays a dev-dependency and
+# never enters the crate's no_std/wasm library build.
+dig-urn-protocol = "0.1"

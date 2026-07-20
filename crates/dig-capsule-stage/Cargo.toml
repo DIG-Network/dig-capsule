@@ -1,7 +1,10 @@
 [package]
 name = "dig-capsule-stage"
 license.workspace = true
-version.workspace = true
+# 0.3.0 (explicit): the public `canonical_resource_urn` now returns the canonical
+# `dig_urn_protocol::DigUrn` instead of the deleted `dig_capsule_core::Urn` — a
+# breaking signature change, so this crate bumps ahead of the workspace 0.2.2.
+version = "0.3.0"
 repository.workspace = true
 edition.workspace = true
 description = "Context-free stage→compile engine: turn an in-memory file set (or a folder) into a self-serving dig-capsule (.dig module) — the SAME pipeline the CLI `commit`/`compile`/`deploy` use, callable in-process by the DIG Browser's native dig-node (no CLI binary)."
@@ -16,6 +19,7 @@ dig-capsule-store = { workspace = true }
 dig-capsule-chunker = { workspace = true }
 dig-capsule-crypto = { workspace = true }
 dig-capsule-compiler = { workspace = true }
+dig-urn-protocol = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"

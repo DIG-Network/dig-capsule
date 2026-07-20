@@ -3,15 +3,15 @@
 //!
 //! A **capsule** is one immutable store generation: the pair
 //! `(store_id, root_hash)`, written canonically as `storeId:rootHash`
-//! (lowercase hex `:` lowercase hex, matching [`Urn`](crate::urn::Urn)'s hex
-//! convention via [`Bytes32::to_hex`]). A **store is a sequence of capsules** —
+//! (lowercase hex `:` lowercase hex, matching the canonical `dig-urn-protocol`
+//! URN's hex convention via [`Bytes32::to_hex`]). A **store is a sequence of capsules** —
 //! one per commit / root advance — identified by its `store_id`; each capsule is
 //! a specific, on-chain-anchored root of that store. See the superproject
 //! `SYSTEM.md` → "Core concept — the capsule".
 //!
 //! This is purely a *naming* layer over the existing `(store_id, root_hash)`
 //! pair. It MUST NOT change any frozen wire format: the URN `canonical()` string
-//! and `retrieval_key()` derivation are untouched — a capsule just gives that
+//! and `retrieval_key` derivation are untouched — a capsule just gives that
 //! pair a canonical name and a stable type to pass around.
 
 use crate::bytes::Bytes32;

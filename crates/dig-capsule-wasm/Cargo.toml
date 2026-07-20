@@ -1,6 +1,10 @@
 [package]
 name = "dig-capsule-wasm"
-version = "0.2.1"
+# 0.2.2 (patch): the URN reconstruction/derivation now runs through the canonical
+# `dig-urn-protocol` `DigUrn` instead of the deleted `dig-capsule-core::Urn`. The
+# `globalThis.digClient` JS contract (export names + shapes) is BYTE-IDENTICAL —
+# an internal-only change, hence a patch bump.
+version = "0.2.2"
 edition = "2021"
 license = "GPL-2.0-only"
 repository = "https://github.com/DIG-Network/dig-capsule"
@@ -28,6 +32,11 @@ crate-type = ["cdylib", "rlib"]
 # Default features (std + serde) are off — the pure `alloc` core is wasm-clean
 # (its `aes-gcm-siv`/`hkdf` deps carry no `getrandom` and no `blst`).
 dig-capsule-core = { path = "../dig-capsule-core", default-features = false }
+# The canonical URN scheme + retrieval/content-key derivation (the hand-rolled core
+# URN is gone). std-only, but wasm32-unknown-unknown provides std and it pulls no
+# `getrandom`/`blst`, so it stays wasm-clean. This crate is workspace-EXCLUDED with
+# its own Cargo.lock, so the dep is declared here directly.
+dig-urn-protocol = "0.1"
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 
 # wasm-bindgen surface.

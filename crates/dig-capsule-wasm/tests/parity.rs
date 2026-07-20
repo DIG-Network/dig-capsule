@@ -12,14 +12,13 @@
 
 use dig_capsule_core::codec::{Decode, Encode};
 use dig_capsule_core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
-use dig_capsule_core::{
-    resource_leaf, Bytes32, MerkleProof, MerkleTree, ProofStep, SecretSalt, Urn,
-};
+use dig_capsule_core::{resource_leaf, Bytes32, MerkleProof, MerkleTree, ProofStep, SecretSalt};
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
 
 fn canonical_urn(store_id: Bytes32, resource_key: &str) -> String {
-    Urn {
+    DigUrn {
         chain: "chia".to_string(),
-        store_id,
+        store_id: UrnBytes32(store_id.0),
         root_hash: None,
         resource_key: Some(resource_key.to_string()),
     }

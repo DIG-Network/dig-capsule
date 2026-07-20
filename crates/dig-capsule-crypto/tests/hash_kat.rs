@@ -24,16 +24,18 @@ fn crate_advertises_its_version() {
 
 #[test]
 fn sha256_of_canonical_urn_equals_retrieval_key() {
-    use dig_capsule_core::{Bytes32, Urn};
+    use dig_capsule_core::Bytes32;
+    use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
 
-    let urn = Urn {
+    let urn = DigUrn {
         chain: "mainnet".to_string(),
-        store_id: Bytes32([0x11; 32]),
+        store_id: UrnBytes32([0x11; 32]),
         root_hash: None,
         resource_key: Some("file.txt".to_string()),
     };
     let canonical = urn.canonical();
     let direct: Bytes32 = dig_capsule_crypto::sha256(canonical.as_bytes());
-    let via_core: Bytes32 = urn.retrieval_key();
-    assert_eq!(direct, via_core);
+    // `retrieval_key` is `SHA-256(canonical())` — same bytes, different newtype.
+    let via_urn: [u8; 32] = urn.retrieval_key().0;
+    assert_eq!(direct.0, via_urn);
 }

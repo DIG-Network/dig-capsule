@@ -19,9 +19,9 @@ use std::sync::Arc;
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 use dig_capsule_core::types::{Bytes32, Bytes48};
-use dig_capsule_core::Urn;
 use dig_capsule_crypto::bls::BlsSecretKey;
 use dig_capsule_host::{serve_blind, BlindServeConfig};
+use dig_urn_protocol::DigUrn;
 use object_store::aws::AmazonS3Builder;
 use object_store::local::LocalFileSystem;
 use object_store::path::Path as ObjPath;
@@ -258,16 +258,18 @@ struct ServeArgs {
 fn resolve_retrieval(args: &ServeArgs) -> Result<(Bytes32, [u8; 32])> {
     match (&args.urn, &args.retrieval_key) {
         (Some(urn_str), _) => {
-            let urn = Urn::parse(urn_str).map_err(|e| anyhow!("parse --urn: {e:?}"))?;
-            // Root-INDEPENDENT canonical URN (drop the root) — this is the
-            // `static_key` the compiler stored at commit time.
-            let canonical = Urn {
+            let urn = DigUrn::parse(urn_str).map_err(|e| anyhow!("parse --urn: {e:?}"))?;
+            // Root-INDEPENDENT canonical URN (drop the root, keep the resource key
+            // VERBATIM — no index.html defaulting) — this is the `static_key` the
+            // compiler stored at commit time: SHA-256(canonical()) of the rootless
+            // form.
+            let rootless = DigUrn {
                 chain: urn.chain.clone(),
                 store_id: urn.store_id,
                 root_hash: None,
                 resource_key: urn.resource_key.clone(),
             };
-            Ok((urn.store_id, canonical.retrieval_key().0))
+            Ok((Bytes32(urn.store_id.0), rootless.retrieval_key().0))
         }
         (None, Some(rk)) => {
             // Need a store_id for HostDeps; --urn is the only carrier of it, so

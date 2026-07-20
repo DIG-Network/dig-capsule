@@ -24,14 +24,14 @@ fn expected_resource_leaves(
 ) -> Vec<Bytes32> {
     use dig_capsule_chunker::chunk_slice;
     use dig_capsule_core::serving::concat_output;
-    use dig_capsule_core::Urn;
+    use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
 
     let mut keyed: Vec<([u8; 32], Bytes32)> = staged
         .iter()
         .map(|(rk, content)| {
-            let urn = Urn {
+            let urn = DigUrn {
                 chain: "chia".to_string(),
-                store_id,
+                store_id: UrnBytes32(store_id.0),
                 root_hash: None,
                 resource_key: Some(rk.to_string()),
             };
@@ -275,8 +275,8 @@ fn commit_is_deterministic_for_fixed_input() {
 fn commit_static_key_matches_client_url_retrieval_key() {
     // The manifest's static_key for a resource equals the retrieval key a client
     // computes from the canonical root-less URN (documented root-independence).
-    use dig_capsule_core::Urn;
     use dig_capsule_store::GenerationManifest;
+    use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn};
 
     let dir = tempdir().unwrap();
     let mut store = Store::init(config(dir.path()), FixedClock::new(1)).unwrap();
@@ -291,13 +291,13 @@ fn commit_static_key_matches_client_url_retrieval_key() {
         .find(|r| r.resource_key == "index.html")
         .unwrap();
 
-    let client_urn = Urn {
+    let client_urn = DigUrn {
         chain: "chia".to_string(),
-        store_id: Bytes32([0x44u8; 32]),
+        store_id: UrnBytes32([0x44u8; 32]),
         root_hash: None,
         resource_key: Some("index.html".to_string()),
     };
-    assert_eq!(rec.static_key, client_urn.retrieval_key());
+    assert_eq!(rec.static_key, Bytes32(client_urn.retrieval_key().0));
     assert_eq!(rec.generation, root);
 }
 

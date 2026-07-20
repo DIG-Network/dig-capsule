@@ -4,14 +4,23 @@
 //! `storeId:rootHash` (lowercase hex : lowercase hex). See SYSTEM.md → capsule.
 
 use dig_capsule_core::codec::{Decode, Encode};
-use dig_capsule_core::urn::Urn;
 use dig_capsule_core::{Bytes32, Capsule};
+use dig_urn_protocol::DigUrn;
 
 fn store_id() -> Bytes32 {
     Bytes32([0x11; 32])
 }
 fn root_hash() -> Bytes32 {
     Bytes32([0x22; 32])
+}
+
+/// The URN → [`Capsule`] bridge (equivalent of the facade's `capsule_from_urn`):
+/// a rooted URN names the `(store_id, root_hash)` capsule; a rootless one names none.
+fn capsule_from_urn(urn: &DigUrn) -> Option<Capsule> {
+    urn.root_hash.map(|root_hash| Capsule {
+        store_id: Bytes32(urn.store_id.0),
+        root_hash: Bytes32(root_hash.0),
+    })
 }
 
 #[test]
@@ -122,8 +131,8 @@ fn capsule_codec_is_two_raw_bytes32() {
 fn urn_with_root_yields_capsule() {
     let sid = store_id().to_hex();
     let rh = root_hash().to_hex();
-    let urn = Urn::parse(&format!("urn:dig:mainnet:{sid}:{rh}/a/b")).unwrap();
-    let cap = urn.as_capsule().expect("urn with root has a capsule");
+    let urn = DigUrn::parse(&format!("urn:dig:mainnet:{sid}:{rh}/a/b")).unwrap();
+    let cap = capsule_from_urn(&urn).expect("urn with root has a capsule");
     // The capsule's canonical string equals the `storeId:rootHash` portion of the
     // URN's canonical string.
     assert_eq!(cap.canonical(), format!("{sid}:{rh}"));
@@ -134,6 +143,6 @@ fn urn_with_root_yields_capsule() {
 #[test]
 fn rootless_urn_yields_no_capsule() {
     let sid = store_id().to_hex();
-    let urn = Urn::parse(&format!("urn:dig:mainnet:{sid}/index.html")).unwrap();
-    assert!(urn.as_capsule().is_none());
+    let urn = DigUrn::parse(&format!("urn:dig:mainnet:{sid}/index.html")).unwrap();
+    assert!(capsule_from_urn(&urn).is_none());
 }

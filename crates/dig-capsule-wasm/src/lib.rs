@@ -14,7 +14,8 @@
 //!    §9; API §17/§18). A decoy's proof cannot verify against the real root.
 //!
 //! The crypto is byte-identical to the host-side `dig-capsule-crypto` (see
-//! `crypto.rs`) and reuses `dig-capsule-core`'s canonical `Urn` and `MerkleProof`.
+//! `crypto.rs`), reuses `dig-capsule-core`'s `MerkleProof`, and reconstructs URNs
+//! via the canonical `dig-urn-protocol` `DigUrn`.
 //!
 //! ## Trust model
 //! The trusted root is read by the caller directly from coinset.org (the
@@ -34,9 +35,8 @@ use alloc::vec::Vec;
 use base64::Engine;
 use dig_capsule_core::codec::Decode;
 use dig_capsule_core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
-use dig_capsule_core::{
-    resource_leaf, Bytes32, MerkleProof, SecretSalt, Urn, CHAIN, DEFAULT_RESOURCE_KEY,
-};
+use dig_capsule_core::{resource_leaf, Bytes32, MerkleProof, SecretSalt};
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn, CANONICAL_CHAIN, DEFAULT_RESOURCE_KEY};
 use wasm_bindgen::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -48,10 +48,10 @@ use wasm_bindgen::prelude::*;
 /// host/CLI commit-time derivation (`canonical_resource_urn`): a URN whose key is
 /// stable across roots so the retrieval key and decryption key never change when
 /// a new generation is committed.
-fn canonical_resource_urn(store_id: Bytes32, resource_key: &str) -> Urn {
-    Urn {
-        chain: CHAIN.to_string(),
-        store_id,
+fn canonical_resource_urn(store_id: Bytes32, resource_key: &str) -> DigUrn {
+    DigUrn {
+        chain: CANONICAL_CHAIN.to_string(),
+        store_id: UrnBytes32(store_id.0),
         root_hash: None,
         resource_key: Some(resource_key.to_string()),
     }
@@ -147,10 +147,10 @@ pub fn reconstruct_urn_with_root(
     } else {
         resource_key
     };
-    let urn = Urn {
-        chain: CHAIN.to_string(),
-        store_id,
-        root_hash: Some(root),
+    let urn = DigUrn {
+        chain: CANONICAL_CHAIN.to_string(),
+        store_id: UrnBytes32(store_id.0),
+        root_hash: Some(UrnBytes32(root.0)),
         resource_key: Some(key.to_string()),
     };
     Ok(urn.canonical())
@@ -167,9 +167,10 @@ pub fn retrieval_key(store_id_hex: &str, resource_key: &str) -> Result<String, J
     } else {
         resource_key
     };
-    Ok(canonical_resource_urn(store_id, key)
-        .retrieval_key()
-        .to_hex())
+    // `retrieval_key = SHA-256(canonical_rootless)`: the URN we build is already
+    // rootless, so its root-INDEPENDENT `content_key` IS that value (byte-identical
+    // to the former rootless `retrieval_key()`).
+    Ok(canonical_resource_urn(store_id, key).content_key().to_hex())
 }
 
 // ---------------------------------------------------------------------------

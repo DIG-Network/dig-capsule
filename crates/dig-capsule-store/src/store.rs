@@ -9,9 +9,9 @@ use crate::staging::StagingArea;
 use dig_capsule_chunker::chunk_slice;
 use dig_capsule_core::serving::concat_output;
 use dig_capsule_core::{
-    Bytes32, ChunkerConfig, GenerationState, MerkleTree, SecretSalt, StoreConfig, Urn, Visibility,
-    CHAIN,
+    Bytes32, ChunkerConfig, GenerationState, MerkleTree, SecretSalt, StoreConfig, Visibility,
 };
+use dig_urn_protocol::{Bytes32 as UrnBytes32, DigUrn, CANONICAL_CHAIN};
 use std::path::Path;
 
 /// The host-side Store entity (§4). Owns the on-disk layout, staging, and
@@ -171,13 +171,13 @@ impl<C: Clock> Store<C> {
 
         for rec in &records {
             // root_hash: None -> retrieval key is root-independent (documented).
-            let urn = Urn {
-                chain: CHAIN.to_string(),
-                store_id: self.config.store_id,
+            let urn = DigUrn {
+                chain: CANONICAL_CHAIN.to_string(),
+                store_id: UrnBytes32(self.config.store_id.0),
                 root_hash: None,
                 resource_key: Some(rec.resource_key.clone()),
             };
-            let static_key = urn.retrieval_key();
+            let static_key = Bytes32(urn.retrieval_key().0);
             // Per-URN AES-256 key (§11.1): public store uses the fixed salt domain,
             // private store mixes the secret salt.
             let aes_key =
