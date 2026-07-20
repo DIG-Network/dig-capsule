@@ -15,6 +15,16 @@ minting, generations/anti-rollback), the §21 remote, and the CLI live in
 This workspace was lifted verbatim from `dig-store` (epic #744 Phase 1); the crate
 names (`dig-capsule-core`, …) are preserved so consumers change only the git URL.
 
+## 0. The public entry point (the `dig-capsule` facade)
+
+The top-level **`dig-capsule`** crate is the curated public entry point to this data
+plane: it re-exports the member crates' surface, organized by concept
+(`capsule`/`urn`/`format`/`merkle`/`chunk`/`metadata` base; `crypto`/`store`/`compile`/
+`stage`/`host`/`prover`/`guest` behind feature flags). Consumers depend on JUST
+`dig-capsule` and use its facade; the `dig-capsule-*` members are an implementation
+detail. The facade adds no format logic and changes no bytes — it re-exports only, so
+the normative contract below is unchanged and the golden fixtures read identically.
+
 ## 1. Capsule identity
 
 - A **capsule** is one immutable store generation: the pair `(store_id, root_hash)`,

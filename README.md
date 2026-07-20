@@ -6,10 +6,54 @@ and the capsule size ladder. A capsule is the DATA portion of a store; the on-ch
 anchor (singleton, storeId, generations) lives in
 [`dig-store`](https://github.com/DIG-Network/digs), which depends on this crate.
 
-Lifted from `dig-store` (epic #744). The crate names (`dig-capsule-core`, …) are
-preserved verbatim so consumers change only the git URL, not their `use` paths.
+## Depend on just `dig-capsule`
 
-## Layout
+`dig-capsule` is a curated **facade**: one clean public API over the workspace's
+`dig-capsule-*` member crates. Consumers depend on this ONE crate and use its concept
+modules — you never reach into `dig-capsule-core` / `-crypto` / `-store` / … directly.
+The whole `.dig` format-manager API is learnable from this crate's docs alone.
+
+```toml
+[dependencies]
+dig-capsule = "0.3"                                   # the whole API (default = full)
+# slim readers (e.g. a URN resolver) take base only:
+# dig-capsule = { version = "0.3", default-features = false }
+```
+
+```rust
+use dig_capsule::prelude::*;
+
+let spec = CapsuleClass::DEFAULT.spec();              // 128 MB, the canonical size
+let urn = Urn::parse("urn:dig:chia:00").unwrap();
+let key: Bytes32 = urn.retrieval_key();               // frozen retrieval-key derivation
+```
+
+The concept modules: `capsule`, `urn`, `format`, `merkle`, `chunk`, `metadata` (base);
+`crypto`, `store`, `compile`, `stage`, `host`, `prover`, `guest` (feature-gated). See
+the crate rustdoc (`cargo doc --open`) for the full re-export map.
+
+### Feature flags
+
+| Feature | Enables | Typical consumer |
+|---------|---------|------------------|
+| *(base)* | read / format / urn / merkle / chunk / metadata — no wasmtime, no `blst` | `dig-urn-resolver` (`default-features = false`) |
+| `default = ["full"]` | `crypto + store + compile + serve` — the whole API | `dig-store`, `dig-node` |
+| `crypto` | native AES-256-GCM-SIV AEAD + Chia-BLS | |
+| `store` | on-disk generation / staging model | |
+| `compile` | files→capsule pipeline (implies `store` + `crypto`) | |
+| `serve` | blind serve triad + serving proofs (implies `crypto`) | |
+| `risc0` | the real RISC0 serving-proof circuit (OFF by default; needs the RISC0 toolchain) | |
+
+### The browser counterpart
+
+The browser + Node read-crypto is NOT a Rust dependency: it is the
+**`@dignetwork/dig-capsule-wasm`** npm package, whose surface (`reconstructUrn`,
+`retrievalKey`, `deriveKey`, `verifyInclusion`, `decryptResource`,
+`decryptResourceToText`, `readPublicManifest`, `version`) is installed on
+`globalThis.digClient`. It produces byte-identical KDF/AEAD/URN/merkle output to the
+native `crypto` module here.
+
+## Layout (implementation detail — depend on the facade, not these)
 
 - `crates/dig-capsule-core` — DIGS format/datasection, capsule identity, codec, sizes,
   chunk-seal + KDF crypto, keytable, manifest, merkle, URN, wire, ABI (`no_std`/

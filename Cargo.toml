@@ -1,9 +1,70 @@
+# The top-level `dig-capsule` FACADE crate (epic #744 / #1247). This is the ONE
+# curated public entry point over the workspace's `dig-capsule-*` members: consumers
+# (dig-store, dig-node, dig-urn-resolver) depend on JUST `dig-capsule` and use its
+# facade — the member split is an implementation detail. Pure facade: re-exports +
+# thin organization only, NO `.dig` format logic and NO format-byte change.
+#
+# The root package version (0.3.0) is DELIBERATELY decoupled from the members
+# (0.2.2 / compiler 1.0.0): both `ensure-version-increment.yml` and `release.yml`
+# resolve "the version" from this file as `package.version OR
+# workspace.package.version`, so the facade releases as v0.3.0 while members stay
+# 0.2.2, with zero extra workflow surgery.
+[package]
+name = "dig-capsule"
+version = "0.3.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The DIG Network .dig capsule data plane — one curated facade over the DIGS format, capsule read-crypto, compiler, staging, and the guest/host serve triad."
+readme = "README.md"
+keywords = ["dig", "chia", "content-addressed", "capsule", "storage"]
+categories = ["cryptography", "encoding", "data-structures"]
+
+[lib]
+name = "dig_capsule"
+path = "src/lib.rs"
+
+# --- The facade's two-tier dependency surface (see [features]). ---
+# The always-on light BASE (read / format / urn / merkle / chunk / metadata; NO
+# wasmtime, NO blst) so slim consumers (e.g. dig-urn-resolver) stay light.
+[dependencies]
+dig-capsule-core = { workspace = true }
+dig-capsule-chunker = { workspace = true }
+# Optional members — each gated behind a feature so the base stays minimal while
+# the default (`full`) pulls the whole API (and CI `--workspace` covers it all).
+dig-capsule-crypto = { workspace = true, optional = true }
+dig-capsule-store = { workspace = true, optional = true }
+dig-capsule-compiler = { workspace = true, optional = true }
+dig-capsule-stage = { workspace = true, optional = true }
+dig-capsule-host = { workspace = true, optional = true }
+dig-capsule-prover = { workspace = true, optional = true }
+dig-capsule-guest = { workspace = true, optional = true }
+
+[features]
+# Default = the WHOLE API, so `dig-capsule = "0.3"` and CI `cargo build --workspace`
+# build/clippy/test every gated module. A slim consumer opts out with
+# `default-features = false` (base only).
+default = ["full"]
+full = ["crypto", "store", "compile", "serve"]
+crypto = ["dep:dig-capsule-crypto"]
+store = ["dep:dig-capsule-store"]
+# The files->capsule build pipeline needs the compiler + staging, and staging seals
+# chunks (crypto) from the local store model (store).
+compile = ["dep:dig-capsule-compiler", "dep:dig-capsule-stage", "store", "crypto"]
+# The blind serve triad (guest logic + host runtime + serving proofs), which signs
+# with the native BLS crypto.
+serve = ["dep:dig-capsule-host", "dep:dig-capsule-prover", "dep:dig-capsule-guest", "crypto"]
+# OFF by default — the real RISC0 serving-proof circuit needs the RISC0 toolchain.
+# Passthrough only: flips the members' own `risc0` features.
+risc0 = ["serve", "dig-capsule-host/risc0", "dig-capsule-prover/risc0"]
+
 [workspace]
 resolver = "2"
 # The `.dig` store DATA PLANE, lifted from dig-store (epic #744 Phase 1): the DIGS
 # format, the compiler (files -> capsule), the capsule read-crypto, staging, and the
 # guest/host serve triad. Member crates are named `dig-capsule-*` (Option B naming,
-# #1247); each is published to crates.io in topological order (see release.yml).
+# #1247); each is published to crates.io in topological order (see release.yml). The
+# top `dig-capsule` facade above is the ROOT package (implicitly a member too).
 members = [
   "crates/dig-capsule-core",
   "crates/dig-capsule-chunker",
@@ -45,6 +106,7 @@ dig-capsule-guest = { path = "crates/dig-capsule-guest", version = "0.2.2" }
 dig-capsule-prover = { path = "crates/dig-capsule-prover", version = "0.2.2" }
 dig-capsule-host = { path = "crates/dig-capsule-host", version = "0.2.2" }
 dig-capsule-compiler = { path = "crates/dig-capsule-compiler", version = "1.0.0" }
+dig-capsule-stage = { path = "crates/dig-capsule-stage", version = "0.2.2" }
 
 # Release hardening: keep integer-overflow checks ON in release builds. This code
 # parses untrusted serialized input and does offset/length arithmetic; silent
