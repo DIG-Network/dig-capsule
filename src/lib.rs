@@ -24,7 +24,7 @@
 //! | [`merkle`] | The ciphertext-leaf merkle tree + inclusion proofs | base |
 //! | [`chunk`] | Content-defined (FastCDC) chunking | base |
 //! | [`metadata`] | The metadata + public manifest | base |
-//! | [`crypto`] | Native AEAD + Chia-BLS signing/verification | `crypto` |
+//! | [`crypto`] | Native AEAD + Chia-BLS signing/verification (its [`crypto::primitives`] are base) | `crypto` |
 //! | [`store`] | The local chunk-store / generation / staging model | `store` |
 //! | [`compile`] | Files → self-serving `.dig` WASM module | `compile` |
 //! | [`stage`] | The stage → compile build pipeline (the files→capsule entry) | `compile` |
@@ -53,12 +53,12 @@
 //! - **`guest-wasm`** — the wasm32, no_std self-serving guest cdylib (exports the guest
 //!   ABI). Used by the build to produce the embedded guest wasm; not for consumers.
 //!
-//! A slim reader uses `dig-capsule = { version = "0.3", default-features = false }`
+//! A slim reader uses `dig-capsule = { version = "0.6", default-features = false }`
 //! → the no_std base only.
 //!
 //! ## The browser counterpart
 //!
-//! The browser + Node read-crypto is the [`wasm_browser`] module, gated on the
+//! The browser + Node read-crypto is the `wasm_browser` module, gated on the
 //! **`wasm`** feature and shipped as the **`@dignetwork/dig-capsule-wasm`** npm
 //! package (built with `wasm-pack build --no-default-features --features wasm`). Its
 //! surface (`reconstructUrn`, `retrievalKey`, `deriveKey`, `verifyInclusion`,
@@ -122,10 +122,10 @@ pub mod wasm_browser;
 
 /// Capsule identity + the size ladder.
 ///
-/// A capsule is the pair `(store_id, root_hash)` ([`Capsule`]); its canonical string
+/// A capsule is the pair `(store_id, root_hash)` ([`Capsule`](capsule::Capsule)); its canonical string
 /// is `storeId:rootHash`. Each capsule is padded to a uniform blob sized by a
-/// [`CapsuleClass`] so its size reveals nothing about the plaintext — the
-/// [`CapsuleClass::DEFAULT`] is 128 MB, the single canonical size.
+/// [`CapsuleClass`](capsule::CapsuleClass) so its size reveals nothing about the plaintext — the
+/// [`CapsuleClass::DEFAULT`](capsule::CapsuleClass::DEFAULT) is 128 MB, the single canonical size.
 pub mod capsule {
     pub use crate::imp::core::capsule::Capsule;
     pub use crate::imp::core::capsule_class::{CapsuleClass, CapsuleSpec};
@@ -133,19 +133,38 @@ pub mod capsule {
         Generation, GenerationId, GenerationState, SecretSalt, StoreConfig, TrustedHostKey,
         Visibility, MAX_STORE_BYTES,
     };
+
+    /// The host-import policy a compiled module is built against — the config-level
+    /// declaration of which `dig_host` imports the guest may use. Consumed by the
+    /// compiler's template checks and by a host standing up a runtime.
+    pub use crate::imp::core::config::HostImportsConfig;
+
+    /// The config-level compilation outcome types.
+    ///
+    /// [`CompilationStats`] is the CANONICAL stats struct (the compiler's richer
+    /// [`compile::CompilerStats`](crate::compile::CompilerStats) is a separate,
+    /// additional detail struct); [`CompilerError`] is the config-level compiler
+    /// error this crate's docs refer to, distinct from
+    /// [`compile::CompilerError`](crate::compile::CompilerError).
+    pub use crate::imp::core::config::{CompilationStats, CompilerError};
+
+    /// The full compilation result (module bytes + stats). `std`-only: it owns
+    /// heap/path-bearing fields the no_std base does not carry.
+    #[cfg(feature = "std")]
+    pub use crate::imp::core::config::CompilationResult;
 }
 
 /// The DIG content URN scheme and its frozen retrieval-key derivation.
 ///
-/// `urn:dig:chia:<store_id>[:<root>][/<resource_key>]` ([`DigUrn`]). The canonical
+/// `urn:dig:chia:<store_id>[:<root>][/<resource_key>]` ([`DigUrn`](urn::DigUrn)). The canonical
 /// scheme, grammar, and key derivation are owned by the `dig-urn-protocol` crate —
 /// the ONE ecosystem definition — and re-exported here so consumers reach them
 /// through the facade. Two keys are derived from a URN, both FROZEN and shared
 /// byte-for-byte with the browser verifier:
 ///
-/// - [`DigUrn::retrieval_key`] = `SHA-256(canonical())` — the URN-identity key that
+/// - [`DigUrn::retrieval_key`](urn::DigUrn::retrieval_key) = `SHA-256(canonical())` — the URN-identity key that
 ///   PINS the root (what the frozen conformance corpus fixes);
-/// - [`DigUrn::content_key`] = `SHA-256(canonical_rootless())` — the root-INDEPENDENT
+/// - [`DigUrn::content_key`](urn::DigUrn::content_key) = `SHA-256(canonical_rootless())` — the root-INDEPENDENT
 ///   key a resolver uses to fetch and to seed the AES key (stable across generations).
 ///
 /// Gated on `std`: `dig-urn-protocol` is a `std` crate (its errors implement
@@ -188,12 +207,38 @@ pub mod format {
     pub use crate::imp::core::keytable::{KeyTableEntry, PathWalk};
     pub use crate::imp::core::tombstone::{RevocationReason, Tombstone, TombstoneScope};
     pub use crate::imp::core::{abi, codec, datasection, serving, wire};
+
+    /// The Chia streamable (BIG-ENDIAN) codec traits and their driver types, lifted
+    /// to the module root so a consumer implementing a wire type writes
+    /// `format::Encode` rather than `format::codec::Encode`.
+    pub use crate::imp::core::codec::{Decode, DecodeError, Decoder, Encode, Encoder};
+
+    /// The guest ABI's packed `(ptr, len)` return encoding — the three `const fn`s
+    /// both sides of the wasm boundary use to pack, unpack, and error-test a return
+    /// value. Lifted to the module root beside [`abi`] for the same reason.
+    pub use crate::imp::core::abi::{is_error, pack_ptr_len, unpack_ptr_len};
+
+    /// The Chia AugScheme ciphersuite tag — the single source of truth every BLS
+    /// layer (native signer, wasm verifier) compares against. Available in the
+    /// no_std base because it is a plain `&str`; the signing/verifying code that
+    /// uses it lives in [`crypto`](crate::crypto) under the `crypto` feature.
+    pub use crate::imp::core::CHIA_BLS_SCHEME;
+
+    /// The no_std copies of the two canonical URN constants: the mainnet-only chain
+    /// tag and the default-view resource key.
+    ///
+    /// The canonical owner is `dig-urn-protocol`, surfaced as
+    /// [`urn::CANONICAL_CHAIN`](crate::urn::CANONICAL_CHAIN) /
+    /// [`urn::DEFAULT_RESOURCE_KEY`](crate::urn::DEFAULT_RESOURCE_KEY); that module
+    /// needs `std`. These base-available copies MUST equal them (asserted in the
+    /// conformance test) and exist so a no_std consumer — the guest — can name them.
+    pub use crate::imp::core::{CHAIN, DEFAULT_RESOURCE_KEY};
 }
 
 /// The content-commitment merkle tree over sealed chunk leaves + inclusion proofs.
 ///
-/// A served [`MerkleProof`] verifies the served ciphertext to the capsule root; a
-/// leaf is domain-separated by [`LEAF_TAG`]/[`NODE_TAG`].
+/// A served [`MerkleProof`](merkle::MerkleProof) verifies the served ciphertext to the capsule root; a
+/// leaf is domain-separated by [`LEAF_TAG`](merkle::LEAF_TAG)/[`NODE_TAG`](merkle::NODE_TAG).
 pub mod merkle {
     pub use crate::imp::core::merkle::{
         resource_leaf, MerkleProof, MerkleTree, ProofStep, LEAF_TAG, NODE_TAG,
@@ -203,7 +248,7 @@ pub mod merkle {
 /// Deterministic content-defined (FastCDC-line) chunking.
 ///
 /// Chunk boundaries are byte-identical across platforms so content-addressed dedup is
-/// stable. [`ChunkerConfig`] carries the commit defaults.
+/// stable. [`ChunkerConfig`](chunk::ChunkerConfig) carries the commit defaults.
 pub mod chunk {
     pub use crate::imp::chunker::{
         chunk_slice, default_config, hash_data, mask_for_target, Chunk, Chunker, GEAR_TABLE,
@@ -229,7 +274,7 @@ pub mod metadata {
 /// recovers the canonical `(store_id, root_hash)` from compiled `.dig` module
 /// bytes using ONLY `wasmparser` + the no_std core — no wasmtime, no chia-bls,
 /// no store. FAIL-CLOSED: it recomputes the merkle root from the embedded
-/// `MerkleNodes` and rejects a forged `CurrentRoot` ([`ModuleReadError::RootMismatch`]).
+/// `MerkleNodes` and rejects a forged `CurrentRoot` ([`ModuleReadError::RootMismatch`](reader::ModuleReadError::RootMismatch)).
 ///
 /// SECURITY: `store_id` is the on-chain launcher id and is NOT self-verifiable
 /// from module bytes — the caller MUST cross-check it against a trusted anchor
@@ -249,12 +294,17 @@ pub mod reader {
 /// This is the AUTHORITATIVE native crypto. The pure, `blst`-free primitives that the
 /// wasm-clean read path uses live under [`crypto::primitives`] — use those only when
 /// you specifically need the no-`blst` variants.
-#[cfg(feature = "crypto")]
 pub mod crypto {
+    #[cfg(feature = "crypto")]
     pub use crate::imp::crypto::*;
 
     /// The pure (no-`blst`, wasm-clean) chunk-seal + KDF primitives from the format
     /// core. Byte-identical to the browser read path.
+    ///
+    /// Available in the **no_std base**, unlike the rest of this module: the seal is
+    /// AES-256-GCM-SIV + HKDF-SHA256 and pulls neither `blst` nor `getrandom`, so the
+    /// slim reader a `default-features = false` consumer builds can open a chunk
+    /// without taking the native `crypto` feature.
     pub mod primitives {
         pub use crate::imp::core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
     }
@@ -274,7 +324,8 @@ pub mod store {
 /// `.dig` WASM module (deterministic, byte-identical).
 ///
 /// Note: [`compile::CompilerError`] is the compiler's error enum, distinct from the
-/// config-level `crate::capsule` compiler error.
+/// config-level `capsule::CompilerError`. [`compile::CompilationResult`] is
+/// re-exported from [`capsule::CompilationResult`].
 #[cfg(feature = "compile")]
 pub mod compile {
     pub use crate::imp::compiler::*;
