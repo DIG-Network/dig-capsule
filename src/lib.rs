@@ -58,7 +58,7 @@
 //!
 //! ## The browser counterpart
 //!
-//! The browser + Node read-crypto is the [`wasm_browser`](crate::wasm_browser) module, gated on the
+//! The browser + Node read-crypto is the `wasm_browser` module, gated on the
 //! **`wasm`** feature and shipped as the **`@dignetwork/dig-capsule-wasm`** npm
 //! package (built with `wasm-pack build --no-default-features --features wasm`). Its
 //! surface (`reconstructUrn`, `retrievalKey`, `deriveKey`, `verifyInclusion`,
@@ -324,7 +324,8 @@ pub mod store {
 /// `.dig` WASM module (deterministic, byte-identical).
 ///
 /// Note: [`compile::CompilerError`] is the compiler's error enum, distinct from the
-/// config-level `crate::capsule` compiler error.
+/// config-level `capsule::CompilerError`. [`compile::CompilationResult`] is
+/// re-exported from [`capsule::CompilationResult`].
 #[cfg(feature = "compile")]
 pub mod compile {
     pub use crate::imp::compiler::*;
