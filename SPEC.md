@@ -22,8 +22,11 @@ modules under `src/imp/`, and only `dig-capsule` publishes to crates.io.
 feature-gated modules. The internal split lives under `src/imp/` (`core`, `chunker`,
 `crypto`, `store`, `compiler`, `stage`, `guest`, `host`, `prover`) and is an
 implementation detail — consumers use only the top-level concept modules
-(`capsule`/`urn`/`format`/`merkle`/`chunk`/`metadata` in the base; `crypto`/`store`/
-`compile`/`stage`/`host`/`prover`/`guest` behind feature flags). Features:
+(`capsule`/`format`/`merkle`/`chunk`/`metadata`/`crypto::primitives` in the base;
+`urn` under `std`; `crypto`/`store`/`compile`/`stage`/`host`/`prover`/`guest` behind
+feature flags). The facade MUST expose every symbol a consumer needs without that
+consumer naming `imp`; `tests/facade_coverage.rs` holds that surface as a compile-time
+contract. Features:
 `default = full` (`crypto`+`store`+`compile`+`serve`); `std` lifts the crate out of
 `no_std` and enables the canonical `urn` scheme + `chunk::chunk_stream` (both require
 `std`); `wasm` is the browser/Node read-crypto surface; `guest-wasm` compiles the

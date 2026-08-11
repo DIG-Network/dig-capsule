@@ -136,9 +136,9 @@ mod compile_concept {
         load_template, obfuscate, output_filename, rekey_module_trusted, verify_module_root,
         ChunkIndex, CompilationResult, CompilationStats, CompileOutcome, Compiler, CompilerConfig,
         CompilerError, CompilerStats, DataSectionInputs, GenerationView, KeyTable, ModuleIdentity,
-        ResourceView, Result as CompileResult, Template, COMPILER_VERSION,
-        DATA_SECTION_MEM_OFFSET, FIXED_BLOB_LEN, MAX_MEMORY_PAGES, REQUIRED_EXPORTS,
-        REQUIRED_HOST_IMPORTS, UNIFORM_BLOB_LEN_ENV,
+        ResourceView, Result as CompileResult, Template, COMPILER_VERSION, DATA_SECTION_MEM_OFFSET,
+        FIXED_BLOB_LEN, MAX_MEMORY_PAGES, REQUIRED_EXPORTS, REQUIRED_HOST_IMPORTS,
+        UNIFORM_BLOB_LEN_ENV,
     };
 }
 
@@ -164,12 +164,13 @@ mod host_concept {
 
 #[cfg(feature = "serve")]
 mod prover_concept {
-    use dig_capsule::prover::{chain, coinset, commitment, error, mock, mock_chain, prover,
-        serving_inputs};
     use dig_capsule::prover::{
         bound_public_output, build_public_input, parse_public_input, signing_message, ChainSource,
         CoinsetChainSource, MockChainSource, MockProver, MockVerifier, Prover, ProverError,
         Result as ProverResult, ServingInputs, Verifier, DEFAULT_FRESHNESS_WINDOW_SECS, NONCE_LEN,
+    };
+    use dig_capsule::prover::{
+        chain, coinset, commitment, error, mock, mock_chain, prover, serving_inputs,
     };
 }
 
@@ -194,7 +195,10 @@ mod guest_concept {
 #[cfg(feature = "std")]
 #[test]
 fn base_constants_match_the_canonical_urn_owner() {
-    assert_eq!(dig_capsule::format::CHAIN, dig_capsule::urn::CANONICAL_CHAIN);
+    assert_eq!(
+        dig_capsule::format::CHAIN,
+        dig_capsule::urn::CANONICAL_CHAIN
+    );
     assert_eq!(
         dig_capsule::format::DEFAULT_RESOURCE_KEY,
         dig_capsule::urn::DEFAULT_RESOURCE_KEY

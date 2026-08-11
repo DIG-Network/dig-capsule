@@ -53,12 +53,12 @@
 //! - **`guest-wasm`** — the wasm32, no_std self-serving guest cdylib (exports the guest
 //!   ABI). Used by the build to produce the embedded guest wasm; not for consumers.
 //!
-//! A slim reader uses `dig-capsule = { version = "0.3", default-features = false }`
+//! A slim reader uses `dig-capsule = { version = "0.6", default-features = false }`
 //! → the no_std base only.
 //!
 //! ## The browser counterpart
 //!
-//! The browser + Node read-crypto is the [`wasm_browser`] module, gated on the
+//! The browser + Node read-crypto is the [`wasm_browser`](crate::wasm_browser) module, gated on the
 //! **`wasm`** feature and shipped as the **`@dignetwork/dig-capsule-wasm`** npm
 //! package (built with `wasm-pack build --no-default-features --features wasm`). Its
 //! surface (`reconstructUrn`, `retrievalKey`, `deriveKey`, `verifyInclusion`,
@@ -122,10 +122,10 @@ pub mod wasm_browser;
 
 /// Capsule identity + the size ladder.
 ///
-/// A capsule is the pair `(store_id, root_hash)` ([`Capsule`]); its canonical string
+/// A capsule is the pair `(store_id, root_hash)` ([`Capsule`](capsule::Capsule)); its canonical string
 /// is `storeId:rootHash`. Each capsule is padded to a uniform blob sized by a
-/// [`CapsuleClass`] so its size reveals nothing about the plaintext — the
-/// [`CapsuleClass::DEFAULT`] is 128 MB, the single canonical size.
+/// [`CapsuleClass`](capsule::CapsuleClass) so its size reveals nothing about the plaintext — the
+/// [`CapsuleClass::DEFAULT`](capsule::CapsuleClass::DEFAULT) is 128 MB, the single canonical size.
 pub mod capsule {
     pub use crate::imp::core::capsule::Capsule;
     pub use crate::imp::core::capsule_class::{CapsuleClass, CapsuleSpec};
@@ -156,15 +156,15 @@ pub mod capsule {
 
 /// The DIG content URN scheme and its frozen retrieval-key derivation.
 ///
-/// `urn:dig:chia:<store_id>[:<root>][/<resource_key>]` ([`DigUrn`]). The canonical
+/// `urn:dig:chia:<store_id>[:<root>][/<resource_key>]` ([`DigUrn`](urn::DigUrn)). The canonical
 /// scheme, grammar, and key derivation are owned by the `dig-urn-protocol` crate —
 /// the ONE ecosystem definition — and re-exported here so consumers reach them
 /// through the facade. Two keys are derived from a URN, both FROZEN and shared
 /// byte-for-byte with the browser verifier:
 ///
-/// - [`DigUrn::retrieval_key`] = `SHA-256(canonical())` — the URN-identity key that
+/// - [`DigUrn::retrieval_key`](urn::DigUrn::retrieval_key) = `SHA-256(canonical())` — the URN-identity key that
 ///   PINS the root (what the frozen conformance corpus fixes);
-/// - [`DigUrn::content_key`] = `SHA-256(canonical_rootless())` — the root-INDEPENDENT
+/// - [`DigUrn::content_key`](urn::DigUrn::content_key) = `SHA-256(canonical_rootless())` — the root-INDEPENDENT
 ///   key a resolver uses to fetch and to seed the AES key (stable across generations).
 ///
 /// Gated on `std`: `dig-urn-protocol` is a `std` crate (its errors implement
@@ -237,8 +237,8 @@ pub mod format {
 
 /// The content-commitment merkle tree over sealed chunk leaves + inclusion proofs.
 ///
-/// A served [`MerkleProof`] verifies the served ciphertext to the capsule root; a
-/// leaf is domain-separated by [`LEAF_TAG`]/[`NODE_TAG`].
+/// A served [`MerkleProof`](merkle::MerkleProof) verifies the served ciphertext to the capsule root; a
+/// leaf is domain-separated by [`LEAF_TAG`](merkle::LEAF_TAG)/[`NODE_TAG`](merkle::NODE_TAG).
 pub mod merkle {
     pub use crate::imp::core::merkle::{
         resource_leaf, MerkleProof, MerkleTree, ProofStep, LEAF_TAG, NODE_TAG,
@@ -248,7 +248,7 @@ pub mod merkle {
 /// Deterministic content-defined (FastCDC-line) chunking.
 ///
 /// Chunk boundaries are byte-identical across platforms so content-addressed dedup is
-/// stable. [`ChunkerConfig`] carries the commit defaults.
+/// stable. [`ChunkerConfig`](chunk::ChunkerConfig) carries the commit defaults.
 pub mod chunk {
     pub use crate::imp::chunker::{
         chunk_slice, default_config, hash_data, mask_for_target, Chunk, Chunker, GEAR_TABLE,
@@ -274,7 +274,7 @@ pub mod metadata {
 /// recovers the canonical `(store_id, root_hash)` from compiled `.dig` module
 /// bytes using ONLY `wasmparser` + the no_std core — no wasmtime, no chia-bls,
 /// no store. FAIL-CLOSED: it recomputes the merkle root from the embedded
-/// `MerkleNodes` and rejects a forged `CurrentRoot` ([`ModuleReadError::RootMismatch`]).
+/// `MerkleNodes` and rejects a forged `CurrentRoot` ([`ModuleReadError::RootMismatch`](reader::ModuleReadError::RootMismatch)).
 ///
 /// SECURITY: `store_id` is the on-chain launcher id and is NOT self-verifiable
 /// from module bytes — the caller MUST cross-check it against a trusted anchor
