@@ -24,7 +24,7 @@
 //! | [`merkle`] | The ciphertext-leaf merkle tree + inclusion proofs | base |
 //! | [`chunk`] | Content-defined (FastCDC) chunking | base |
 //! | [`metadata`] | The metadata + public manifest | base |
-//! | [`crypto`] | Native AEAD + Chia-BLS signing/verification | `crypto` |
+//! | [`crypto`] | Native AEAD + Chia-BLS signing/verification (its [`crypto::primitives`] are base) | `crypto` |
 //! | [`store`] | The local chunk-store / generation / staging model | `store` |
 //! | [`compile`] | Files → self-serving `.dig` WASM module | `compile` |
 //! | [`stage`] | The stage → compile build pipeline (the files→capsule entry) | `compile` |
@@ -133,6 +133,25 @@ pub mod capsule {
         Generation, GenerationId, GenerationState, SecretSalt, StoreConfig, TrustedHostKey,
         Visibility, MAX_STORE_BYTES,
     };
+
+    /// The host-import policy a compiled module is built against — the config-level
+    /// declaration of which `dig_host` imports the guest may use. Consumed by the
+    /// compiler's template checks and by a host standing up a runtime.
+    pub use crate::imp::core::config::HostImportsConfig;
+
+    /// The config-level compilation outcome types.
+    ///
+    /// [`CompilationStats`] is the CANONICAL stats struct (the compiler's richer
+    /// [`compile::CompilerStats`](crate::compile::CompilerStats) is a separate,
+    /// additional detail struct); [`CompilerError`] is the config-level compiler
+    /// error this crate's docs refer to, distinct from
+    /// [`compile::CompilerError`](crate::compile::CompilerError).
+    pub use crate::imp::core::config::{CompilationStats, CompilerError};
+
+    /// The full compilation result (module bytes + stats). `std`-only: it owns
+    /// heap/path-bearing fields the no_std base does not carry.
+    #[cfg(feature = "std")]
+    pub use crate::imp::core::config::CompilationResult;
 }
 
 /// The DIG content URN scheme and its frozen retrieval-key derivation.
@@ -188,6 +207,32 @@ pub mod format {
     pub use crate::imp::core::keytable::{KeyTableEntry, PathWalk};
     pub use crate::imp::core::tombstone::{RevocationReason, Tombstone, TombstoneScope};
     pub use crate::imp::core::{abi, codec, datasection, serving, wire};
+
+    /// The Chia streamable (BIG-ENDIAN) codec traits and their driver types, lifted
+    /// to the module root so a consumer implementing a wire type writes
+    /// `format::Encode` rather than `format::codec::Encode`.
+    pub use crate::imp::core::codec::{Decode, DecodeError, Decoder, Encode, Encoder};
+
+    /// The guest ABI's packed `(ptr, len)` return encoding — the three `const fn`s
+    /// both sides of the wasm boundary use to pack, unpack, and error-test a return
+    /// value. Lifted to the module root beside [`abi`] for the same reason.
+    pub use crate::imp::core::abi::{is_error, pack_ptr_len, unpack_ptr_len};
+
+    /// The Chia AugScheme ciphersuite tag — the single source of truth every BLS
+    /// layer (native signer, wasm verifier) compares against. Available in the
+    /// no_std base because it is a plain `&str`; the signing/verifying code that
+    /// uses it lives in [`crypto`](crate::crypto) under the `crypto` feature.
+    pub use crate::imp::core::CHIA_BLS_SCHEME;
+
+    /// The no_std copies of the two canonical URN constants: the mainnet-only chain
+    /// tag and the default-view resource key.
+    ///
+    /// The canonical owner is `dig-urn-protocol`, surfaced as
+    /// [`urn::CANONICAL_CHAIN`](crate::urn::CANONICAL_CHAIN) /
+    /// [`urn::DEFAULT_RESOURCE_KEY`](crate::urn::DEFAULT_RESOURCE_KEY); that module
+    /// needs `std`. These base-available copies MUST equal them (asserted in the
+    /// conformance test) and exist so a no_std consumer — the guest — can name them.
+    pub use crate::imp::core::{CHAIN, DEFAULT_RESOURCE_KEY};
 }
 
 /// The content-commitment merkle tree over sealed chunk leaves + inclusion proofs.
@@ -249,12 +294,17 @@ pub mod reader {
 /// This is the AUTHORITATIVE native crypto. The pure, `blst`-free primitives that the
 /// wasm-clean read path uses live under [`crypto::primitives`] — use those only when
 /// you specifically need the no-`blst` variants.
-#[cfg(feature = "crypto")]
 pub mod crypto {
+    #[cfg(feature = "crypto")]
     pub use crate::imp::crypto::*;
 
     /// The pure (no-`blst`, wasm-clean) chunk-seal + KDF primitives from the format
     /// core. Byte-identical to the browser read path.
+    ///
+    /// Available in the **no_std base**, unlike the rest of this module: the seal is
+    /// AES-256-GCM-SIV + HKDF-SHA256 and pulls neither `blst` nor `getrandom`, so the
+    /// slim reader a `default-features = false` consumer builds can open a chunk
+    /// without taking the native `crypto` feature.
     pub mod primitives {
         pub use crate::imp::core::crypto::{decrypt_chunk, derive_decryption_key, encrypt_chunk};
     }
