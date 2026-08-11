@@ -119,6 +119,14 @@ jobs:
           fi
           echo "OK: reader graph is wasmtime-free"
 
+      # The facade-coverage contract's base-tier entries (crypto::primitives,
+      # format::{CHAIN, DEFAULT_RESOURCE_KEY, CHIA_BLS_SCHEME}) only discriminate
+      # with `crypto` OFF — with it on they resolve either way. Compile the test
+      # against the slim tier so a re-gating regression fails here.
+      - name: Facade coverage compiles on the no_std base tier
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo check --no-default-features --test facade_coverage
+
   coverage:
     name: Coverage (>=80% lines, gated)
     runs-on: ubuntu-latest
