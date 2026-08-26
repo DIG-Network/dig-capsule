@@ -7,7 +7,7 @@
 # the guest ABI, and `COMPILER_VERSION` are UNCHANGED — a pure mechanical collapse.
 [package]
 name = "dig-capsule"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 license = "GPL-2.0-only"
 repository = "https://github.com/DIG-Network/dig-capsule"
@@ -156,8 +156,14 @@ serde = { version = "1", default-features = false, features = ["derive", "alloc"
 # The canonical DIG URN scheme (std-only). Enabled by `std`.
 dig-urn-protocol = { version = "0.1", optional = true }
 
-# crypto
-chia-bls = { version = "=0.45.0", optional = true }
+# crypto — the blst-backed Chia AugScheme host signer (`imp::crypto::bls`). Held on the ECOSYSTEM
+# chia line (0.36.1), the line every other DIG crate resolves, so a `chia_bls` value never has two
+# incompatible type identities inside one consumer's graph. `chia_bls` types are fully wrapped by this
+# crate's own `SecretKey`/`PublicKey`/`Signature` newtypes and reach no public signature, so the line
+# is a WIRE-compatibility statement: `tests/fixtures/bls_vectors.json` (generated on the previous
+# `=0.45.0` line) is the frozen AugScheme KAT that holds it, and `tests/parity.rs` holds the
+# blst/`bls12_381` cross-impl agreement the guest depends on.
+chia-bls = { version = "0.36.1", optional = true }
 thiserror = { version = "1", optional = true }
 
 # store
