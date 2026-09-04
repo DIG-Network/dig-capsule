@@ -7,7 +7,7 @@
 # the guest ABI, and `COMPILER_VERSION` are UNCHANGED — a pure mechanical collapse.
 [package]
 name = "dig-capsule"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 license = "GPL-2.0-only"
 repository = "https://github.com/DIG-Network/dig-capsule"
